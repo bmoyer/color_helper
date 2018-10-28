@@ -8,9 +8,21 @@
 #include <X11/Xatom.h>
 #include <X11/Xresource.h>
 
-#include "color.c"
-
 static Window root;
+
+
+int get_color(Display* d, int x, int y, int* r, int* b, int* g) {
+    XColor c;
+    XImage *image = XGetImage (d, XRootWindow (d, XDefaultScreen (d)), x, y, 1, 1, AllPlanes, XYPixmap);
+    c.pixel = XGetPixel (image, 0, 0);
+    XFree (image);
+    XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
+
+    *r = (c.red/256);
+    *b = (c.blue/256);
+    *g = (c.green/256);
+}
+
 
 static void
 query_pointer(Display *d)
@@ -33,9 +45,12 @@ query_pointer(Display *d)
     }
   }
 
-  char r, g, b;
-  get_color(x, y, &r, &g, &b);
-  fprintf(stderr, "X: %d Y: %d\n", x, y);
+  int r = 0;
+  int b = 0;
+  int g = 0;
+  get_color(d, x, y, &r, &g, &b);
+  //fprintf(stderr, "X: %d Y: %d\n", x, y);
+  fprintf(stderr, "RGB: [%d, %d, %d]\n", r, g, b);
 }
 
 static int
