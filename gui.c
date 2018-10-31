@@ -12,7 +12,7 @@
 #include "color_detect.h"
 
 #define N_THREADS    1
-#define N_ITERATIONS 10000
+#define MAX_COLORS   255
 
 GtkWidget* box;
 GtkWidget* bar;
@@ -106,14 +106,7 @@ main(gint argc, gchar *argv[])
 {
     color* colors = read_colors();
     for(int i = 0; i < NUM_COLORS; i++) {
-    //for(int i = 0; i < 3; i++) {
-        int r = colors[i].r;
-        int g = colors[i].g;
-        int b = colors[i].b;
-
-        //printf("rgb: %d,%d,%d -- %s", colors[i].r, colors[i].g, colors[i].b, colors[i].name);
-        //printf("rgb: %d,%d,%d -- ", colors[i].r, colors[i].g, colors[i].b);
-        printf("%s", colors[i].name);
+        //printf("%s", colors[i].name);
     }
     free(colors);
     return 0;

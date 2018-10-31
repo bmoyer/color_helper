@@ -1,1 +1,0 @@
-gcc gui.c -o gui `pkg-config --cflags --libs gtk+-2.0 x11`
