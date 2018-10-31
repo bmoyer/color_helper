@@ -1,0 +1,215 @@
+Green beige,190,189,127
+Beige,194,176,120
+Sand yellow,198,166,100
+Signal yellow,229,190,001
+Golden yellow,205,164,052
+Honey yellow,169,131,007
+Maize yellow,228,160,016
+Daffodil yellow,220,156,000
+Brown beige,138,102,066
+Lemon yellow,199,180,070
+Oyster white,234,230,202
+Ivory,225,204,079
+Light ivory,230,214,144
+Sulfur yellow,237,255,033
+Saffron yellow,245,208,051
+Zinc yellow,248,243,053
+Grey beige,158,151,100
+Olive yellow,153,153,080
+Rape yellow,243,218,011
+Traffic yellow,250,210,001
+Ochre yellow,174,160,075
+Luminous yellow,255,255,000
+Curry,157,145,001
+Melon yellow,244,169,000
+Broom yellow,214,174,001
+Dahlia yellow,243,165,005
+Pastel yellow,239,169,074
+Pearl beige,106,093,077
+Pearl gold,112,083,053
+Sun yellow,243,159,024
+Yellow orange,237,118,014
+Red orange,201,060,032
+Vermilion,203,040,033
+Pastel orange,255,117,020
+Pure orange,244,070,017
+Luminous orange,255,035,001
+Luminous bright orange,255,164,032
+Bright red orange,247,094,037
+Traffic orange,245,064,033
+Signal orange,216,075,032
+Deep orange,236,124,038
+Salmon range,235,106,014
+Pearl orange,195,088,049
+Flame red,175,043,030
+Signal red,165,032,025
+Carmine red,162,035,029
+Ruby red,155,017,030
+Purple red,117,021,030
+Wine red,094,033,041
+Black red,065,034,039
+Oxide red,100,036,036
+Brown red,120,031,025
+Beige red,193,135,107
+Tomato red,161,035,018
+Antique pink,211,110,112
+Light pink,234,137,154
+Coral red,179,040,033
+Rose,230,050,068
+Strawberry red,213,048,050
+Traffic red,204,006,005
+Salmon pink,217,080,048
+Luminous red,248,000,000
+Luminous bright red,254,000,000
+Raspberry red,197,029,052
+Pure  red,203,050,052
+Orient red,179,036,040
+Pearl ruby red,114,020,034
+Pearl pink,180,076,067
+Red lilac,222,076,138
+Red violet,146,043,062
+Heather violet,222,076,138
+Claret violet,110,028,052
+Blue lilac,108,070,117
+Traffic purple,160,052,114
+Purple violet,074,025,044
+Signal violet,144,070,132
+Pastel violet,164,125,144
+Telemagenta,215,045,109
+Pearl violet,134,115,161
+Pearl black berry,108,104,129
+Violet blue,042,046,075
+Green blue,031,052,056
+Ultramarine blue,032,033,079
+Saphire blue,029,030,051
+Black blue,032,033,079
+Signal blue,030,045,110
+Brillant blue,062,095,138
+Grey blue,038,037,045
+Azure blue,002,086,105
+Gentian blue,014,041,075
+Steel blue,035,026,036
+Light blue,059,131,189
+Cobalt blue,037,041,074
+Pigeon blue,096,111,140
+Sky blue,034,113,179
+Traffic blue,006,057,113
+Turquoise blue,063,136,143
+Capri blue,027,085,131
+Ocean blue,029,051,074
+Water blue,037,109,123
+Night blue,037,040,080
+Distant blue,073,103,141
+Pastel blue,093,155,155
+Pearl gentian blue,042,100,120
+Pearl night blue,016,044,084
+Patina green,049,102,080
+Emerald green,040,114,051
+Leaf green,045,087,044
+Olive green,066,070,050
+Blue green,031,058,061
+Moss green,047,069,056
+Grey olive,062,059,050
+Bottle green,052,059,041
+Brown green,057,053,042
+Fir green,049,055,043
+Grass green,053,104,045
+Reseda green,088,114,070
+Black green,052,062,064
+Reed green,108,113,086
+Yellow olive,071,064,046
+Black olive,059,060,054
+Turquoise green,030,089,069
+May green,076,145,065
+Yellow green,087,166,057
+Pastel green,189,236,182
+Chrome green,046,058,035
+Pale green,137,172,118
+Olive drab,037,034,027
+Traffic green,048,132,070
+Fern green,061,100,045
+Opal green,001,093,082
+Light green,132,195,190
+Pine green,044,085,069
+Mint green,032,096,061
+Signal green,049,127,067
+Mint turquoise,073,126,118
+Pastel turquoise,127,181,181
+Pearl green,028,084,045
+Pearl opal green,022,053,055
+Pure green,000,143,057
+Luminous green,000,187,045
+Squirrel grey,120,133,139
+Silver grey,138,149,151
+Olive grey,126,123,082
+Moss grey,108,112,089
+Signal grey,150,153,146
+Mouse grey,100,107,099
+Beige grey,109,101,082
+Khaki grey,106,095,049
+Green grey,077,086,069
+Tarpaulin grey,076,081,074
+Iron grey,067,075,077
+Basalt grey,078,087,084
+Brown grey,070,069,049
+Slate grey,067,071,080
+Anthracite grey,041,049,051
+Black grey,035,040,043
+Umbra grey,051,047,044
+Concrete grey,104,108,094
+Graphite grey,071,074,081
+Granite grey,047,053,059
+Stone grey,139,140,122
+Blue grey,071,075,078
+Pebble grey,184,183,153
+Cement grey,125,132,113
+Yellow grey,143,139,102
+Light grey,215,215,215
+Platinum grey,127,118,121
+Dusty grey,125,127,120
+Agate grey,195,195,195
+Quartz grey,108,105,096
+Window grey,157,161,170
+Traffic grey A,141,148,141
+Traffic grey B,078,084,082
+Silk grey,202,196,176
+Telegrey 1,144,144,144
+Telegrey 2,130,137,143
+Telegrey 4,208,208,208
+Pearl mouse grey,137,129,118
+Green brown,130,108,052
+Ochre brown,149,095,032
+Signal brown,108,059,042
+Clay brown,115,066,034
+Copper brown,142,064,042
+Fawn brown,089,053,031
+Olive brown,111,079,040
+Nut brown,091,058,041
+Red brown,089,035,033
+Sepia brown,056,044,030
+Chestnut brown,099,058,052
+Mahogany brown,076,047,039
+Chocolate brown,069,050,046
+Grey brown,064,058,058
+Black brown,033,033,033
+Orange brown,166,094,046
+Beige brown,121,085,061
+Pale brown,117,092,072
+Terra brown,078,059,049
+Pearl copper,118,060,040
+Cream,250,244,227
+Grey white,231,235,218
+Signal white,244,244,244
+Signal black,040,040,040
+Jet black,010,010,013
+White aluminium,165,165,165
+Grey aluminium,143,143,143
+Pure white,255,255,255
+Graphite black,028,028,028
+Traffic white,246,246,246
+Traffic black,030,030,030
+Papyrus white,215,215,215
+Pearl light grey,156,156,156
+Pearl dark grey,130,130,130
+Black,0,0,0
+White,255,255,255
