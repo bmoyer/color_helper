@@ -106,7 +106,9 @@ main(gint argc, gchar *argv[])
 {
     color* colors = read_colors();
     for(int i = 0; i < NUM_COLORS; i++) {
-        //printf("%s", colors[i].name);
+        if (colors[i].name[0] != '\0')
+        printf("<%s> {%d, %d, %d}\n", colors[i].name,
+            colors[i].r, colors[i].g, colors[i].b);
     }
     free(colors);
     return 0;

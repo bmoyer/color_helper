@@ -19,7 +19,24 @@ color* read_colors() {
     color c;
 
     FILE* file = fopen("map.txt", "r");
-    while (fgets(c.name, 30, file)) {
+    char line[50];
+    while (fgets(line, 50, file)) {
+        // read color name
+        char* pt = strtok(line, ",");
+        sprintf(c.name, "%s", pt);
+        
+        // read red value
+        pt = strtok(NULL, ",");
+        c.r = atoi(pt);
+
+        // read green value
+        pt = strtok(NULL, ",");
+        c.g = atoi(pt);
+
+        // read blue value
+        pt = strtok(NULL, ",");
+        c.b = atoi(pt);
+
         ret[i] = c;
         i++;
     }
@@ -27,4 +44,3 @@ color* read_colors() {
 
     return ret;
 }
-
