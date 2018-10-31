@@ -23,6 +23,7 @@ GMainContext *context;
 static Window root;
 
 Display* d;
+color* colors;
 
     static int
 catchFalseAlarm(void)
@@ -71,8 +72,15 @@ update_progress_bar(gpointer user_data)
     query_pointer(&x, &y);
     char s2[20];
     get_color(d, x, y, &r, &g, &b);
+    
+    // set RGB readout
     sprintf(s2, "%d, %d, %d", r, g, b);
     gtk_label_set_label(GTK_LABEL(label2),s2);
+
+    // set name readout
+    color c = nearest_color(r, g, b, colors, MAX_COLORS);
+    gtk_label_set_label(GTK_LABEL(label), c.name);
+
     return G_SOURCE_REMOVE;
 }
 
@@ -104,14 +112,15 @@ thread_func(gpointer user_data)
     gint
 main(gint argc, gchar *argv[])
 {
-    color* colors = read_colors();
+    //color* colors = read_colors();
+    colors = read_colors();
     for(int i = 0; i < NUM_COLORS; i++) {
         if (colors[i].name[0] != '\0')
         printf("<%s> {%d, %d, %d}\n", colors[i].name,
             colors[i].r, colors[i].g, colors[i].b);
     }
-    free(colors);
-    return 0;
+
+//    return 0;
 
     // setup x11
     XSetWindowAttributes attribs;
@@ -170,6 +179,7 @@ main(gint argc, gchar *argv[])
     for (n = 0; n < N_THREADS; ++n)
         g_thread_join(thread[n]);
 
+    free(colors);
     return 0;
 }
 

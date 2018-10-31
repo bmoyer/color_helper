@@ -4,13 +4,23 @@
 
 #include "color_detect.h"
 
-color nearest_color(int r, int g, int b, color colors[]) {
-    color c;
-    
-    c.r = 1;
-    c.g = 2;
-    c.b = 3;
-    return c;
+int get_color_distance(int r, int g, int b, color* c) {
+    return abs(r-c->r) + abs(g-c->g) + abs(b-c->b);
+}
+
+color nearest_color(int r, int g, int b, color* colors, int ncolors) {
+    color closest = colors[0];
+    int smallest_dist = get_color_distance(r, g, b, &closest);
+
+    for(int i = 1; i < ncolors; i++) {
+        int dist = get_color_distance(r, g, b, &colors[i]);
+        if(dist < smallest_dist) {
+            smallest_dist = dist;
+            closest = colors[i];
+        }
+    }
+
+    return closest;
 }
 
 color* read_colors() {
@@ -44,3 +54,4 @@ color* read_colors() {
 
     return ret;
 }
+
