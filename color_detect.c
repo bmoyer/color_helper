@@ -28,8 +28,8 @@ color nearest_color(int y, int u, int v, color* colors, int ncolors) {
     }
 
     //printf("closest (rgb): (%d,%d,%d)\n", closest.r,closest.g,closest.b);
-    printf("yuvs: (%d,%d,%d) --- (%d,%d,%d)\n",
-        y,u,v,closest.r,closest.g,closest.b);
+    //printf("yuvs: (%d,%d,%d) --- (%d,%d,%d)\n",
+        //y,u,v,closest.r,closest.g,closest.b);
     return closest;
 }
 

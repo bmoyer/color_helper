@@ -31,7 +31,7 @@ catchFalseAlarm(void)
     return 0;
 }   
 
-int get_color(Display* d, int x, int y, int* r, int* b, int* g) {
+void get_color(Display* d, int x, int y, int* r, int* b, int* g) {
     XColor c;
     XImage *image = XGetImage (d, XRootWindow (d, XDefaultScreen (d)), x, y, 1, 1, AllPlanes, XYPixmap);
     c.pixel = XGetPixel (image, 0, 0);
@@ -41,7 +41,7 @@ int get_color(Display* d, int x, int y, int* r, int* b, int* g) {
     *r = (c.red/256);
     *b = (c.blue/256);
     *g = (c.green/256);
-    printf("RGB was: (%d,%d,%d)", *r,*g,*b);
+    //printf("RGB was: (%d,%d,%d)", *r,*g,*b);
 }
 
     static void
@@ -95,13 +95,12 @@ thread_func(gpointer user_data)
 {
     //int n_thread = GPOINTER_TO_INT(user_data);
     //Display* d = (Display*)user_data;
-    int n;
     GSource *source;
 
     //g_print("Starting thread %d\n", n_thread);
 
     for (;;) {
-        g_usleep(100000);
+        g_usleep(5000);
         //query_pointer(d);
         source = g_idle_source_new();
         g_source_set_callback(source, update_progress_bar, NULL, NULL);
