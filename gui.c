@@ -12,7 +12,7 @@
 #include "color_detect.h"
 
 #define N_THREADS    1
-#define MAX_COLORS   255
+#define MAX_COLORS   1000
 
 GtkWidget* box;
 GtkWidget* bar;
@@ -41,6 +41,7 @@ int get_color(Display* d, int x, int y, int* r, int* b, int* g) {
     *r = (c.red/256);
     *b = (c.blue/256);
     *g = (c.green/256);
+    printf("RGB was: (%d,%d,%d)", *r,*g,*b);
 }
 
     static void
@@ -71,14 +72,18 @@ update_progress_bar(gpointer user_data)
     int r, g, b, x, y;
     query_pointer(&x, &y);
     char s2[20];
-    get_color(d, x, y, &r, &g, &b);
+    //get_color(d, x, y, &r, &g, &b);
+    get_color(d, x, y, &r, &b, &g);
     
     // set RGB readout
     sprintf(s2, "%d, %d, %d", r, g, b);
     gtk_label_set_label(GTK_LABEL(label2),s2);
 
     // set name readout
-    color c = nearest_color(r, g, b, colors, MAX_COLORS);
+    int yc, uc, vc;
+    yuv_from_rgb(&yc, &uc, &vc, r, g, b);
+    //color c = nearest_color(yc, uc, vc, colors, MAX_COLORS);
+    color c = nearest_color(r,g,b, colors, MAX_COLORS);
     gtk_label_set_label(GTK_LABEL(label), c.name);
 
     return G_SOURCE_REMOVE;
@@ -96,7 +101,7 @@ thread_func(gpointer user_data)
     //g_print("Starting thread %d\n", n_thread);
 
     for (;;) {
-        g_usleep(1000);
+        g_usleep(100000);
         //query_pointer(d);
         source = g_idle_source_new();
         g_source_set_callback(source, update_progress_bar, NULL, NULL);

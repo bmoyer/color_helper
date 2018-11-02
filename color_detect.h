@@ -1,15 +1,23 @@
 #ifndef COLOR_DETECT_H_INCLUDED
 #define COLOR_DETECT_H_INCLUDED
 
-#define NUM_COLORS 255
+#define NUM_COLORS 1000
 
 typedef struct {
+    // RGB color space
     int r;
     int g;
     int b;
-    char name[30];
+
+    // YUV color space
+    int y;
+    int u;
+    int v;
+
+    char name[60];
 } color;
 
+void yuv_from_rgb(int* y, int* u, int* v, int r, int g, int b);
 color nearest_color(int r, int g, int b, color* colors, int ncolors);
 color* read_colors();
 

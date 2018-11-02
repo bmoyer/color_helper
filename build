@@ -2,4 +2,4 @@
 if [ -f gui ]; then
     rm gui
 fi
-gcc gui.c color_detect.c -o gui `pkg-config --cflags --libs gtk+-2.0 x11`
+gcc gui.c color_detect.c -o gui `pkg-config --cflags --libs gtk+-2.0 x11` -lm
