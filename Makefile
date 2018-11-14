@@ -1,5 +1,5 @@
 TARGET = prog
-LIBS = -lm `pkg-config --cflags --libs gtk+-2.0 x11`
+LIBS = -lm `pkg-config --cflags --libs gtk+-3.0 x11`
 CC = gcc
 CFLAGS = -g -Wall
 
