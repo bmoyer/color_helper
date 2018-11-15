@@ -73,28 +73,6 @@ draw_cb (GtkWidget *widget,
   return FALSE;
 }
 
-/* Draw a rectangle on the surface at the given position */
-static void
-draw_brush (GtkWidget *widget,
-            gdouble    x,
-            gdouble    y)
-{
-  cairo_t *cr;
-
-  /* Paint to the surface, where we store our state */
-  cr = cairo_create (surface);
-  cairo_set_source_rgb(cr, 0.5, 0, 0.5);
-
-  int RECT_SIZE = 100;
-  cairo_rectangle (cr, x - 3, y - 3, RECT_SIZE, RECT_SIZE);
-  cairo_fill (cr);
-
-  cairo_destroy (cr);
-
-  /* Now invalidate the affected region of the drawing area. */
-  gtk_widget_queue_draw_area (widget, x - 3, y - 3, RECT_SIZE, RECT_SIZE);
-}
-
 static void draw_rect(color c)
 {
   cairo_t *cr;
@@ -110,54 +88,6 @@ static void draw_rect(color c)
 
   /* Now invalidate the affected region of the drawing area. */
   gtk_widget_queue_draw_area (drawing_area, 0, 0, RECT_SIZE, RECT_SIZE);
-}
-
-/* Handle button press events by either drawing a rectangle
- * or clearing the surface, depending on which button was pressed.
- * The ::button-press signal handler receives a GdkEventButton
- * struct which contains this information.
- */
-static gboolean
-button_press_event_cb (GtkWidget      *widget,
-                       GdkEventButton *event,
-                       gpointer        data)
-{
-  /* paranoia check, in case we haven't gotten a configure event */
-  if (surface == NULL)
-    return FALSE;
-
-  if (event->button == GDK_BUTTON_PRIMARY)
-    {
-      draw_brush (widget, event->x, event->y);
-    }
-  else if (event->button == GDK_BUTTON_SECONDARY)
-    {
-      clear_surface ();
-      gtk_widget_queue_draw (widget);
-    }
-
-  /* We've handled the event, stop processing */
-  return TRUE;
-}
-
-/* Handle motion events by continuing to draw if button 1 is
- * still held down. The ::motion-notify signal handler receives
- * a GdkEventMotion struct which contains this information.
- */
-static gboolean
-motion_notify_event_cb (GtkWidget      *widget,
-                        GdkEventMotion *event,
-                        gpointer        data)
-{
-  /* paranoia check, in case we haven't gotten a configure event */
-  if (surface == NULL)
-    return FALSE;
-
-  if (event->state & GDK_BUTTON1_MASK)
-    draw_brush (widget, event->x, event->y);
-
-  /* We've handled it, stop processing */
-  return TRUE;
 }
 
 static void
@@ -236,7 +166,7 @@ static gpointer thread_func(gpointer user_data)
     //g_print("Starting thread %d\n", n_thread);
 
     for (;;) {
-        g_usleep(5000);
+        g_usleep(50000);
         //query_pointer(d);
         source = g_idle_source_new();
         g_source_set_callback(source, update_color, NULL, NULL);
@@ -316,19 +246,6 @@ activate (GtkApplication *app,
   g_signal_connect (drawing_area,"configure-event",
                     G_CALLBACK (configure_event_cb), NULL);
 
-  /* Event signals */
-  g_signal_connect (drawing_area, "motion-notify-event",
-                    G_CALLBACK (motion_notify_event_cb), NULL);
-  g_signal_connect (drawing_area, "button-press-event",
-                    G_CALLBACK (button_press_event_cb), NULL);
-
-  /* Ask to receive events the drawing area doesn't normally
-   * subscribe to. In particular, we need to ask for the
-   * button press and motion notify events that want to handle.
-   */
-  gtk_widget_set_events (drawing_area, gtk_widget_get_events (drawing_area)
-                                     | GDK_BUTTON_PRESS_MASK
-                                     | GDK_POINTER_MOTION_MASK);
 
   // start update thread
   thread = g_thread_new(NULL, thread_func, (gpointer)d);

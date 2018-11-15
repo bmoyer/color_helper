@@ -1,4 +1,4 @@
-TARGET = prog
+TARGET = color_helper 
 LIBS = -lm `pkg-config --cflags --libs gtk+-3.0 x11`
 CC = gcc
 CFLAGS = -g -Wall

@@ -29,6 +29,7 @@
 *.dylib
 
 # Executables
+color_helper
 *.exe
 *.out
 *.app
