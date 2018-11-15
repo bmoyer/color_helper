@@ -1,189 +1,207 @@
 #include <gtk/gtk.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
-#include <X11/Xos.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/Xatom.h>
-#include <X11/Xresource.h>
+/* Surface to store current scribbles */
+static cairo_surface_t *surface = NULL;
 
-#include "color_detect.h"
-
-#define N_THREADS    1
-#define MAX_COLORS   1000
-
-GtkWidget* box;
-GtkWidget* bar;
-GtkWidget* label;
-GtkWidget* label2;
-GtkWidget* darea;
-GMainContext *context;
-static Window root;
-
-Display* d;
-color* colors;
-
-    static int
-catchFalseAlarm(void)
+static void
+clear_surface (void)
 {
-    return 0;
-}   
+  cairo_t *cr;
 
-void get_color(Display* d, int x, int y, int* r, int* b, int* g) {
-    XColor c;
-    XImage *image = XGetImage (d, XRootWindow (d, XDefaultScreen (d)), x, y, 1, 1, AllPlanes, XYPixmap);
-    c.pixel = XGetPixel (image, 0, 0);
-    XFree (image);
-    XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
+  cr = cairo_create (surface);
 
-    *r = (c.red/256);
-    *b = (c.blue/256);
-    *g = (c.green/256);
-    //printf("RGB was: (%d,%d,%d)", *r,*g,*b);
+  cairo_set_source_rgb (cr, 1, 1, 1);
+  cairo_paint (cr);
+
+  cairo_destroy (cr);
 }
 
-    static void
-query_pointer(int* x, int* y)
+/* Create a new surface of the appropriate size to store our scribbles */
+static gboolean
+configure_event_cb (GtkWidget         *widget,
+                    GdkEventConfigure *event,
+                    gpointer           data)
 {
-    static int once;
-    int i;
-    unsigned m;
-    Window w;
+  if (surface)
+    cairo_surface_destroy (surface);
 
-    if (once == 0) {
-        once = 1;
-        root = DefaultRootWindow(d);
-    }
+  surface = gdk_window_create_similar_surface (gtk_widget_get_window (widget),
+                                               CAIRO_CONTENT_COLOR,
+                                               gtk_widget_get_allocated_width 
+(widget),
+                                               gtk_widget_get_allocated_height 
+(widget));
 
-    if (!XQueryPointer(d, root, &root, &w, x, y, &i, &i, &m)) {
-        for (i = -1; ++i < ScreenCount(d); ) {
-            if (root == RootWindow(d, i)) {
-                break;
-            } 
-        }
-    }
+  /* Initialize the surface to white */
+  clear_surface ();
+
+  /* We've handled the configure event, no need for further processing. */
+  return TRUE;
 }
 
-    static gboolean
-update_progress_bar(gpointer user_data)
+/* Redraw the screen from the surface. Note that the ::draw
+ * signal receives a ready-to-be-used cairo_t that is already
+ * clipped to only draw the exposed areas of the widget
+ */
+static gboolean
+draw_cb (GtkWidget *widget,
+         cairo_t   *cr,
+         gpointer   data)
 {
-    int r, g, b, x, y;
-    query_pointer(&x, &y);
-    char s2[20];
-    //get_color(d, x, y, &r, &g, &b);
-    get_color(d, x, y, &r, &b, &g);
-    
-    // set RGB readout
-    sprintf(s2, "%d, %d, %d", r, g, b);
-    gtk_label_set_label(GTK_LABEL(label2),s2);
+  cairo_set_source_surface (cr, surface, 0, 0);
+  cairo_paint (cr);
 
-    // set name readout
-    int yc, uc, vc;
-    yuv_from_rgb(&yc, &uc, &vc, r, g, b);
-    //color c = nearest_color(yc, uc, vc, colors, MAX_COLORS);
-    color c = nearest_color(r,g,b, colors, MAX_COLORS);
-    gtk_label_set_label(GTK_LABEL(label), c.name);
-
-    return G_SOURCE_REMOVE;
+  return FALSE;
 }
 
-
-    static gpointer
-thread_func(gpointer user_data)
+/* Draw a rectangle on the surface at the given position */
+static void
+draw_brush (GtkWidget *widget,
+            gdouble    x,
+            gdouble    y)
 {
-    //int n_thread = GPOINTER_TO_INT(user_data);
-    //Display* d = (Display*)user_data;
-    GSource *source;
+  cairo_t *cr;
 
-    //g_print("Starting thread %d\n", n_thread);
+  /* Paint to the surface, where we store our state */
+  cr = cairo_create (surface);
 
-    for (;;) {
-        g_usleep(5000);
-        //query_pointer(d);
-        source = g_idle_source_new();
-        g_source_set_callback(source, update_progress_bar, NULL, NULL);
-        g_source_attach(source, context);
-        g_source_unref(source);
-    }
+  cairo_rectangle (cr, x - 3, y - 3, 6, 6);
+  cairo_fill (cr);
 
-    //g_print("Ending thread %d\n", n_thread);
-    return NULL;
+  cairo_destroy (cr);
+
+  /* Now invalidate the affected region of the drawing area. */
+  gtk_widget_queue_draw_area (widget, x - 3, y - 3, 6, 6);
 }
 
-
-    gint
-main(gint argc, gchar *argv[])
+/* Handle button press events by either drawing a rectangle
+ * or clearing the surface, depending on which button was pressed.
+ * The ::button-press signal handler receives a GdkEventButton
+ * struct which contains this information.
+ */
+static gboolean
+button_press_event_cb (GtkWidget      *widget,
+                       GdkEventButton *event,
+                       gpointer        data)
 {
-    //color* colors = read_colors();
-    colors = read_colors();
-    for(int i = 0; i < NUM_COLORS; i++) {
-        if (colors[i].name[0] != '\0')
-        printf("<%s> {%d, %d, %d}\n", colors[i].name,
-            colors[i].r, colors[i].g, colors[i].b);
+  /* paranoia check, in case we haven't gotten a configure event */
+  if (surface == NULL)
+    return FALSE;
+
+  if (event->button == GDK_BUTTON_PRIMARY)
+    {
+      draw_brush (widget, event->x, event->y);
+    }
+  else if (event->button == GDK_BUTTON_SECONDARY)
+    {
+      clear_surface ();
+      gtk_widget_queue_draw (widget);
     }
 
-//    return 0;
+  /* We've handled the event, stop processing */
+  return TRUE;
+}
 
-    // setup x11
-    XSetWindowAttributes attribs;
-    Window w;
+/* Handle motion events by continuing to draw if button 1 is
+ * still held down. The ::motion-notify signal handler receives
+ * a GdkEventMotion struct which contains this information.
+ */
+static gboolean
+motion_notify_event_cb (GtkWidget      *widget,
+                        GdkEventMotion *event,
+                        gpointer        data)
+{
+  /* paranoia check, in case we haven't gotten a configure event */
+  if (surface == NULL)
+    return FALSE;
 
-    if (!(d = XOpenDisplay(0))) {
-        fprintf (stderr, "Couldn't connect to %s\n", XDisplayName (0));
-        exit (EXIT_FAILURE);
-    }
+  if (event->state & GDK_BUTTON1_MASK)
+    draw_brush (widget, event->x, event->y);
 
-    attribs.override_redirect = True;
-    w = XCreateWindow(d, DefaultRootWindow (d), 800, 800, 1, 1, 0,
-            CopyFromParent, InputOnly, CopyFromParent,
-            CWOverrideRedirect, &attribs);
-    XMapWindow(d, w);
-    XSetErrorHandler((XErrorHandler )catchFalseAlarm);
-    XSync (d, 0);
+  /* We've handled it, stop processing */
+  return TRUE;
+}
 
-    // setup gtk
-    GtkWidget *window;
-    GThread *thread[N_THREADS];
-    int n;
+static void
+close_window (void)
+{
+  if (surface)
+    cairo_surface_destroy (surface);
+}
 
-    gtk_init(&argc, &argv);
+static void
+activate (GtkApplication *app,
+          gpointer        user_data)
+{
+  GtkWidget *window;
+  GtkWidget *frame;
+  GtkWidget *drawing_area;
+  GtkWidget* box;
+  GtkWidget* color_name_label;
+  GtkWidget* rgb_label;
 
-    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_decorated((GtkWindow*)window, 1);
-    g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+  window = gtk_application_window_new (app);
+  gtk_window_set_title (GTK_WINDOW (window), "color helper");
 
-    box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    gtk_container_add(GTK_CONTAINER(window), box);
+  g_signal_connect (window, "destroy", G_CALLBACK (close_window), NULL);
 
-    //bar = gtk_progress_bar_new();
-    //gtk_box_pack_start(GTK_BOX(box), bar, 0, 0, 0);
-    //gtk_container_add(GTK_CONTAINER(window), bar);
+  gtk_container_set_border_width (GTK_CONTAINER (window), 8);
 
-    label = gtk_label_new("i am a label");
-    gtk_box_pack_start(GTK_BOX(box), label, 0, 0, 40);
+  frame = gtk_frame_new (NULL);
+  gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_IN);
+  box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 20);
+  gtk_container_add(GTK_CONTAINER(window), box);
 
-    label2 = gtk_label_new("another label");
-    gtk_box_pack_start(GTK_BOX(box), label2, 0, 0, 40);
-    //gtk_container_add(GTK_CONTAINER(window), label);
+  //gtk_container_add (GTK_CONTAINER (window), frame);
+  gtk_box_pack_start(GTK_BOX(box), frame, 0, 0, 0);
 
-    darea = gtk_drawing_area_new();
-    gtk_box_pack_start(GTK_BOX(box), darea, 0, 0, 40);
+  color_name_label = gtk_label_new("Cornflower blue");
+  gtk_box_pack_start(GTK_BOX(box), color_name_label, 0, 0, 0);
 
-    context = g_main_context_default();
+  rgb_label = gtk_label_new("127, 127, 127");
+  gtk_box_pack_start(GTK_BOX(box), rgb_label, 0, 0, 0);
 
-    for (n = 0; n < N_THREADS; ++n)
-        //thread[n] = g_thread_new(NULL, thread_func, GINT_TO_POINTER(n));
-        thread[n] = g_thread_new(NULL, thread_func, (gpointer)d);
+  drawing_area = gtk_drawing_area_new ();
+  /* set a minimum size */
+  gtk_widget_set_size_request (drawing_area, 100, 100);
 
-    gtk_widget_show_all(window);
-    gtk_main();
+  gtk_container_add (GTK_CONTAINER (frame), drawing_area);
 
-    for (n = 0; n < N_THREADS; ++n)
-        g_thread_join(thread[n]);
+  /* Signals used to handle the backing surface */
+  g_signal_connect (drawing_area, "draw",
+                    G_CALLBACK (draw_cb), NULL);
+  g_signal_connect (drawing_area,"configure-event",
+                    G_CALLBACK (configure_event_cb), NULL);
 
-    free(colors);
-    return 0;
+  /* Event signals */
+  g_signal_connect (drawing_area, "motion-notify-event",
+                    G_CALLBACK (motion_notify_event_cb), NULL);
+  g_signal_connect (drawing_area, "button-press-event",
+                    G_CALLBACK (button_press_event_cb), NULL);
+
+  /* Ask to receive events the drawing area doesn't normally
+   * subscribe to. In particular, we need to ask for the
+   * button press and motion notify events that want to handle.
+   */
+  gtk_widget_set_events (drawing_area, gtk_widget_get_events (drawing_area)
+                                     | GDK_BUTTON_PRESS_MASK
+                                     | GDK_POINTER_MOTION_MASK);
+
+  gtk_widget_show_all (window);
+}
+
+int
+main (int    argc,
+      char **argv)
+{
+  GtkApplication *app;
+  int status;
+
+  app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
+  g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+  status = g_application_run (G_APPLICATION (app), argc, argv);
+  g_object_unref (app);
+
+  return status;
 }
 
