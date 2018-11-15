@@ -154,7 +154,7 @@ main(gint argc, gchar *argv[])
     gtk_window_set_decorated((GtkWindow*)window, 1);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
-    box = gtk_hbox_new(0, 0);
+    box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     gtk_container_add(GTK_CONTAINER(window), box);
 
     //bar = gtk_progress_bar_new();
