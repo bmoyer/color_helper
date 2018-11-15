@@ -8,8 +8,8 @@ CFLAGS = -g -Wall
 default: $(TARGET)
 all: default
 
-OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c))
-HEADERS = $(wildcard *.h)
+OBJECTS = $(patsubst %.c, %.o, $(wildcard src/*.c))
+HEADERS = $(wildcard src/*.h)
 
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) $(LIBS) -c $< -o $@
@@ -20,5 +20,5 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(OBJECTS) -Wall $(LIBS) -o $@
 
 clean:
-	-rm -f *.o
+	-rm -f src/*.o
 	-rm -f $(TARGET)

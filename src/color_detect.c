@@ -44,7 +44,7 @@ color* read_colors() {
     int i = 0;
     color c;
 
-    FILE* file = fopen("map.txt", "r");
+    FILE* file = fopen("res/map.txt", "r");
     char line[60];
     while (fgets(line, 60, file)) {
         // read color name
