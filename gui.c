@@ -17,6 +17,7 @@ Display* d;
 GThread* thread;
 GtkWidget* color_name_label;
 GtkWidget* rgb_label;
+GtkWidget *drawing_area;
 GMainContext *context;
 
 color* colors;
@@ -82,14 +83,33 @@ draw_brush (GtkWidget *widget,
 
   /* Paint to the surface, where we store our state */
   cr = cairo_create (surface);
+  cairo_set_source_rgb(cr, 0.5, 0, 0.5);
 
-  cairo_rectangle (cr, x - 3, y - 3, 6, 6);
+  int RECT_SIZE = 100;
+  cairo_rectangle (cr, x - 3, y - 3, RECT_SIZE, RECT_SIZE);
   cairo_fill (cr);
 
   cairo_destroy (cr);
 
   /* Now invalidate the affected region of the drawing area. */
-  gtk_widget_queue_draw_area (widget, x - 3, y - 3, 6, 6);
+  gtk_widget_queue_draw_area (widget, x - 3, y - 3, RECT_SIZE, RECT_SIZE);
+}
+
+static void draw_rect(color c)
+{
+  cairo_t *cr;
+  /* Paint to the surface, where we store our state */
+  cr = cairo_create (surface);
+  cairo_set_source_rgb(cr, c.r/255.0, c.g/255.0, c.b/255.0);
+
+  int RECT_SIZE = 100;
+  cairo_rectangle (cr, 0, 0, RECT_SIZE, RECT_SIZE);
+  cairo_fill (cr);
+
+  cairo_destroy (cr);
+
+  /* Now invalidate the affected region of the drawing area. */
+  gtk_widget_queue_draw_area (drawing_area, 0, 0, RECT_SIZE, RECT_SIZE);
 }
 
 /* Handle button press events by either drawing a rectangle
@@ -202,6 +222,8 @@ update_color(gpointer user_data)
     color c = nearest_color(r,g,b, colors, MAX_COLORS);
     gtk_label_set_label(GTK_LABEL(color_name_label), c.name);
 
+    draw_rect(c);
+
     return G_SOURCE_REMOVE;
 }
 
@@ -257,7 +279,6 @@ activate (GtkApplication *app,
 {
   GtkWidget *window;
   GtkWidget *frame;
-  GtkWidget *drawing_area;
   GtkWidget* box;
 
   setup_x11();
