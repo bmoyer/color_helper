@@ -24,7 +24,7 @@ GMainContext *context;
 
 color* colors;
 
-int CONTEXT_SIZE = 10;
+int CONTEXT_SIZE = 25;
 
 static void
 clear_surface (cairo_surface_t* surface)
@@ -137,14 +137,15 @@ static void draw_context_pixels(color context_pixels[CONTEXT_SIZE][CONTEXT_SIZE]
   cr = cairo_create (context_surface);
 
   int RECT_SIZE = 100;
+  int PIXEL_SCALE = RECT_SIZE/CONTEXT_SIZE;
 
-  for(int x = 0; x < 10; x++) {
-      for(int y = 0; y < 10; y++) {
+  for(int x = 0; x < CONTEXT_SIZE; x++) {
+      for(int y = 0; y < CONTEXT_SIZE; y++) {
           cairo_set_source_rgb(cr,
                                context_pixels[x][y].r/255.0, 
                                context_pixels[x][y].g/255.0, 
                                context_pixels[x][y].b/255.0);
-          cairo_rectangle(cr, x*10, y*10, 10, 10);
+          cairo_rectangle(cr, x*PIXEL_SCALE, y*PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
           cairo_fill(cr);
       }
   }
@@ -229,7 +230,7 @@ void get_context_pixels(Display* d, int x, int y, color    colors[CONTEXT_SIZE][
             int mouse_x = x - i + CONTEXT_SIZE/2;
             int mouse_y = y - j + CONTEXT_SIZE/2;
             clip_coords_to_display_size(&mouse_x, &mouse_y);
-            get_color(d, mouse_x, mouse_y, &colors[9-i][9-j].r, &colors[9-i][9-j].g, &colors[9-i][9-j].b);
+            get_color(d, mouse_x, mouse_y, &colors[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].r, &colors[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].g, &colors[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].b);
         }
     }
     //XFree (image);
