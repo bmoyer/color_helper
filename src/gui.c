@@ -201,6 +201,23 @@ void get_color(Display* d, int x, int y, int* r, int* g, int* b) {
     //printf("RGB was: (%d,%d,%d)", *r,*g,*b);
 }
 
+void clip_coords_to_display_size(int* x, int* y) {
+    Screen* screen = ScreenOfDisplay(d, 0);
+    if (*x < 0) {
+        *x = 0;
+    }
+    if (*x >= screen->width) {
+        *x = screen->width-1;
+    }
+
+    if (*y < 0) {
+        *y = 0;
+    }
+    if (*y >= screen->height) {
+        *y = screen->height-1;
+    }
+}
+
 void get_context_pixels(Display* d, int x, int y, color    colors[CONTEXT_SIZE][CONTEXT_SIZE])
 {
     //XColor c;
@@ -209,9 +226,10 @@ void get_context_pixels(Display* d, int x, int y, color    colors[CONTEXT_SIZE][
     // need to go from CURSOR-CONTEXT_SIZE/2 to CURSOR + CONTEXT_SIZE/2 - not from 0.
     for (int i = 0; i < CONTEXT_SIZE; i++) {
         for(int j = 0; j < CONTEXT_SIZE; j++) {
-            int mouse_x = x - i;
-            int mouse_y = y - j;
-            get_color(d, mouse_x, mouse_y, &colors[i][j].r, &colors[i][j].g, &colors[i][j].b);
+            int mouse_x = x - i + CONTEXT_SIZE/2;
+            int mouse_y = y - j + CONTEXT_SIZE/2;
+            clip_coords_to_display_size(&mouse_x, &mouse_y);
+            get_color(d, mouse_x, mouse_y, &colors[9-i][9-j].r, &colors[9-i][9-j].g, &colors[9-i][9-j].b);
         }
     }
     //XFree (image);
