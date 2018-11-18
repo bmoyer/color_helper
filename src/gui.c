@@ -9,22 +9,21 @@
 #include "color_detect.h"
 
 #define MAX_COLORS   1000
+#define CONTEXT_SIZE 25
 
-/* Surface to store current scribbles */
 static Window root;
 static cairo_surface_t *rgb_surface = NULL;
 static cairo_surface_t *context_surface = NULL;
 Display* d;
-GThread* thread;
+GThread* update_thread;
 GtkWidget* color_name_label;
 GtkWidget* rgb_label;
 GtkWidget *color_drawing_area;
 GtkWidget *context_drawing_area;
 GMainContext *context;
 
+color CONTEXT_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
 color* colors;
-
-int CONTEXT_SIZE = 25;
 
 static void
 clear_surface (cairo_surface_t* surface)
@@ -130,7 +129,7 @@ static void draw_rect(int r, int g, int b)
   gtk_widget_queue_draw_area (color_drawing_area, 0, 0, RECT_SIZE, RECT_SIZE);
 }
 
-static void draw_context_pixels(color context_pixels[CONTEXT_SIZE][CONTEXT_SIZE])
+static void draw_context_pixels()
 {
   cairo_t *cr;
   /* Paint to the surface, where we store our state */
@@ -142,9 +141,9 @@ static void draw_context_pixels(color context_pixels[CONTEXT_SIZE][CONTEXT_SIZE]
   for(int x = 0; x < CONTEXT_SIZE; x++) {
       for(int y = 0; y < CONTEXT_SIZE; y++) {
           cairo_set_source_rgb(cr,
-                               context_pixels[x][y].r/255.0, 
-                               context_pixels[x][y].g/255.0, 
-                               context_pixels[x][y].b/255.0);
+                               CONTEXT_BUFFER[x][y].r/255.0, 
+                               CONTEXT_BUFFER[x][y].g/255.0, 
+                               CONTEXT_BUFFER[x][y].b/255.0);
           cairo_rectangle(cr, x*PIXEL_SCALE, y*PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
           cairo_fill(cr);
       }
@@ -219,7 +218,7 @@ void clip_coords_to_display_size(int* x, int* y) {
     }
 }
 
-void get_context_pixels(Display* d, int x, int y, color    colors[CONTEXT_SIZE][CONTEXT_SIZE])
+void get_context_pixels(Display* d, int x, int y)
 {
     //XColor c;
     //XImage *image = XGetImage (d, XRootWindow (d, XDefaultScreen (d)), x, y, CONTEXT_SIZE, CONTEXT_SIZE, AllPlanes, XYPixmap);
@@ -230,7 +229,7 @@ void get_context_pixels(Display* d, int x, int y, color    colors[CONTEXT_SIZE][
             int mouse_x = x - i + CONTEXT_SIZE/2;
             int mouse_y = y - j + CONTEXT_SIZE/2;
             clip_coords_to_display_size(&mouse_x, &mouse_y);
-            get_color(d, mouse_x, mouse_y, &colors[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].r, &colors[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].g, &colors[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].b);
+            get_color(d, mouse_x, mouse_y, &CONTEXT_BUFFER[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].r, &CONTEXT_BUFFER[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].g, &CONTEXT_BUFFER[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].b);
         }
     }
     //XFree (image);
@@ -250,9 +249,8 @@ update_color(gpointer user_data)
     get_color(d, x, y, &r, &g, &b);
 
     // get pixels around cursor
-    color context_pixels[CONTEXT_SIZE][CONTEXT_SIZE];
-    get_context_pixels(d, x, y, context_pixels);
-    draw_context_pixels(context_pixels);
+    get_context_pixels(d, x, y);
+    draw_context_pixels();
 
     // set RGB readout
     sprintf(s2, "%d, %d, %d", r, g, b);
@@ -267,24 +265,18 @@ update_color(gpointer user_data)
     return G_SOURCE_REMOVE;
 }
 
-static gpointer thread_func(gpointer user_data)
+static gpointer update_thread_func(gpointer user_data)
 {
-    //int n_thread = GPOINTER_TO_INT(user_data);
-    //Display* d = (Display*)user_data;
     GSource *source;
-
-    //g_print("Starting thread %d\n", n_thread);
 
     for (;;) {
         g_usleep(50000);
-        //query_pointer(d);
         source = g_idle_source_new();
         g_source_set_callback(source, update_color, NULL, NULL);
         g_source_attach(source, context);
         g_source_unref(source);
     }
 
-    //g_print("Ending thread %d\n", n_thread);
     return NULL;
 }
 
@@ -337,7 +329,7 @@ activate (GtkApplication *app,
   context_frame = gtk_frame_new (NULL);
   gtk_frame_set_shadow_type (GTK_FRAME (context_frame), GTK_SHADOW_IN);
 
-  box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 20);
+  box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   gtk_container_add(GTK_CONTAINER(window), box);
 
   gtk_box_pack_start(GTK_BOX(box), frame, 0, 0, 0);
@@ -371,7 +363,7 @@ activate (GtkApplication *app,
 
 
   // start update thread
-  thread = g_thread_new(NULL, thread_func, (gpointer)d);
+  update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
 
   gtk_widget_show_all (window);
 }
@@ -387,7 +379,7 @@ main (int    argc,
   app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
   g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
   status = g_application_run (G_APPLICATION (app), argc, argv);
-  g_thread_join(thread);
+  g_thread_join(update_thread);
   g_object_unref (app);
 
   return status;
