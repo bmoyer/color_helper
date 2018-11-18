@@ -41,15 +41,15 @@ clear_surface (cairo_surface_t* surface)
 
 /* Create a new surface of the appropriate size to store our scribbles */
 static gboolean
-configure_event_cb (GtkWidget         *widget,
+configure_event_cb_rgb (GtkWidget         *widget,
                     GdkEventConfigure *event,
                     gpointer           data)
 {
-  cairo_surface_t* surface = &data;
-  if (surface)
-    cairo_surface_destroy (surface);
+  //cairo_surface_t* surface = rgb_surface;
+  if (rgb_surface)
+    cairo_surface_destroy (rgb_surface);
 
-  surface = gdk_window_create_similar_surface (gtk_widget_get_window (widget),
+  rgb_surface = gdk_window_create_similar_surface (gtk_widget_get_window (widget),
   //surface = gdk_window_create_similar_surface (gtk_widget_get_window (widget),
                                                CAIRO_CONTENT_COLOR,
                                                gtk_widget_get_allocated_width 
@@ -58,7 +58,30 @@ configure_event_cb (GtkWidget         *widget,
 (widget));
 
   /* Initialize the surface to white */
-  clear_surface (surface);
+  clear_surface (rgb_surface);
+
+  /* We've handled the configure event, no need for further processing. */
+  return TRUE;
+}
+
+static gboolean
+configure_event_cb_context (GtkWidget         *widget,
+                    GdkEventConfigure *event,
+                    gpointer           data)
+{
+  if (context_surface)
+    cairo_surface_destroy (context_surface);
+
+  context_surface = gdk_window_create_similar_surface (gtk_widget_get_window (widget),
+  //surface = gdk_window_create_similar_surface (gtk_widget_get_window (widget),
+                                               CAIRO_CONTENT_COLOR,
+                                               gtk_widget_get_allocated_width 
+(widget),
+                                               gtk_widget_get_allocated_height 
+(widget));
+
+  /* Initialize the surface to white */
+  clear_surface (context_surface);
 
   /* We've handled the configure event, no need for further processing. */
   return TRUE;
@@ -69,23 +92,33 @@ configure_event_cb (GtkWidget         *widget,
  * clipped to only draw the exposed areas of the widget
  */
 static gboolean
-draw_cb (GtkWidget *widget,
+draw_cb_rgb (GtkWidget *widget,
          cairo_t   *cr,
          gpointer   data)
 {
-  cairo_surface_t* surface = (cairo_surface_t*)data;
-  cairo_set_source_surface (cr, surface, 0, 0);
+  cairo_set_source_surface (cr, rgb_surface, 0, 0);
   cairo_paint (cr);
 
   return FALSE;
 }
 
-static void draw_rect(color c)
+static gboolean
+draw_cb_context (GtkWidget *widget,
+         cairo_t   *cr,
+         gpointer   data)
+{
+  cairo_set_source_surface (cr, context_surface, 0, 0);
+  cairo_paint (cr);
+
+  return FALSE;
+}
+
+static void draw_rect(int r, int g, int b)
 {
   cairo_t *cr;
   /* Paint to the surface, where we store our state */
   cr = cairo_create (rgb_surface);
-  cairo_set_source_rgb(cr, c.r/255.0, c.g/255.0, c.b/255.0);
+  cairo_set_source_rgb(cr, r/255.0, g/255.0, b/255.0);
 
   int RECT_SIZE = 100;
   cairo_rectangle (cr, 0, 0, RECT_SIZE, RECT_SIZE);
@@ -102,9 +135,9 @@ static void draw_context_pixels(color context_pixels[CONTEXT_SIZE][CONTEXT_SIZE]
   cairo_t *cr;
   /* Paint to the surface, where we store our state */
   cr = cairo_create (context_surface);
-  //color c = context_pixels[9][9];
-  //cairo_set_source_rgb(cr, c.r/255.0, c.g/255.0, c.b/255.0);
-  cairo_set_source_rgb(cr, 255,0,255);
+  color c = context_pixels[0][0];
+
+  cairo_set_source_rgb(cr, c.r/255.0, c.g/255.0, c.b/255.0);
 
   int RECT_SIZE = 100;
   cairo_rectangle (cr, 0, 0, RECT_SIZE, RECT_SIZE);
@@ -148,7 +181,7 @@ query_pointer(int* x, int* y)
     }
 }
 
-void get_color(Display* d, int x, int y, int* r, int* b, int* g) {
+void get_color(Display* d, int x, int y, int* r, int* g, int* b) {
     XColor c;
     XImage *image = XGetImage (d, XRootWindow (d, XDefaultScreen (d)), x, y, 1, 1, AllPlanes, XYPixmap);
     c.pixel = XGetPixel (image, 0, 0);
@@ -163,19 +196,20 @@ void get_color(Display* d, int x, int y, int* r, int* b, int* g) {
 
 void get_context_pixels(Display* d, int x, int y, color    colors[CONTEXT_SIZE][CONTEXT_SIZE])
 {
-    XColor c;
-    XImage *image = XGetImage (d, XRootWindow (d, XDefaultScreen (d)), x, y, CONTEXT_SIZE, CONTEXT_SIZE, AllPlanes, XYPixmap);
+    //XColor c;
+    //XImage *image = XGetImage (d, XRootWindow (d, XDefaultScreen (d)), x, y, CONTEXT_SIZE, CONTEXT_SIZE, AllPlanes, XYPixmap);
 
+    // need to go from CURSOR-CONTEXT_SIZE/2 to CURSOR + CONTEXT_SIZE/2 - not from 0.
     for (int i = 0; i < CONTEXT_SIZE; i++) {
         for(int j = 0; j < CONTEXT_SIZE; j++) {
-            c.pixel = XGetPixel (image, i, j);
-            colors[i][j].r  = (c.red/256);
-            colors[i][j].b = (c.blue/256);
-            colors[i][j].g = (c.green/256);
+            int mouse_x = x - i;
+            int mouse_y = y - j;
+            get_color(d, mouse_x, mouse_y, &colors[i][j].r, &colors[i][j].g, &colors[i][j].b);
+            printf("color: %d %d %d\n", colors[i][j].r, colors[i][j].g, colors[i][j].b);
         }
     }
-    XFree (image);
-    XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
+    //XFree (image);
+    //XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
 
 }
 
@@ -188,12 +222,12 @@ update_color(gpointer user_data)
     char s2[20];
 
     // get color of pixel under cursor
-    get_color(d, x, y, &r, &b, &g);
+    get_color(d, x, y, &r, &g, &b);
 
     // get pixels around cursor
     color context_pixels[CONTEXT_SIZE][CONTEXT_SIZE];
     get_context_pixels(d, x, y, context_pixels);
-    //draw_context_pixels(context_pixels);
+    draw_context_pixels(context_pixels);
 
     // set RGB readout
     sprintf(s2, "%d, %d, %d", r, g, b);
@@ -203,7 +237,7 @@ update_color(gpointer user_data)
     color c = nearest_color(r, g, b, colors, MAX_COLORS);
 
     gtk_label_set_label(GTK_LABEL(color_name_label), c.name);
-    draw_rect(c);
+    draw_rect(r, g, b);
 
     return G_SOURCE_REMOVE;
 }
@@ -301,14 +335,14 @@ activate (GtkApplication *app,
 
   /* Signals used to handle the backing surface */
   g_signal_connect (color_drawing_area, "draw",
-                    G_CALLBACK (draw_cb), (gpointer)rgb_surface);
+                    G_CALLBACK (draw_cb_rgb), NULL);
   g_signal_connect (color_drawing_area,"configure-event",
-                    G_CALLBACK (configure_event_cb), (gpointer)rgb_surface);
+                    G_CALLBACK (configure_event_cb_rgb), NULL);
 
   g_signal_connect (context_drawing_area, "draw",
-                    G_CALLBACK (draw_cb), (gpointer)context_surface);
+                    G_CALLBACK (draw_cb_context), NULL);
   g_signal_connect (context_drawing_area,"configure-event",
-                    G_CALLBACK (configure_event_cb), (gpointer)context_surface);
+                    G_CALLBACK (configure_event_cb_context), NULL);
 
 
   // start update thread
