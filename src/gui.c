@@ -135,13 +135,20 @@ static void draw_context_pixels(color context_pixels[CONTEXT_SIZE][CONTEXT_SIZE]
   cairo_t *cr;
   /* Paint to the surface, where we store our state */
   cr = cairo_create (context_surface);
-  color c = context_pixels[0][0];
-
-  cairo_set_source_rgb(cr, c.r/255.0, c.g/255.0, c.b/255.0);
 
   int RECT_SIZE = 100;
-  cairo_rectangle (cr, 0, 0, RECT_SIZE, RECT_SIZE);
-  cairo_fill (cr);
+
+  for(int x = 0; x < 10; x++) {
+      for(int y = 0; y < 10; y++) {
+          cairo_set_source_rgb(cr,
+                               context_pixels[x][y].r/255.0, 
+                               context_pixels[x][y].g/255.0, 
+                               context_pixels[x][y].b/255.0);
+          cairo_rectangle(cr, x*10, y*10, 10, 10);
+          cairo_fill(cr);
+      }
+  }
+
 
   cairo_destroy (cr);
 
@@ -205,7 +212,6 @@ void get_context_pixels(Display* d, int x, int y, color    colors[CONTEXT_SIZE][
             int mouse_x = x - i;
             int mouse_y = y - j;
             get_color(d, mouse_x, mouse_y, &colors[i][j].r, &colors[i][j].g, &colors[i][j].b);
-            printf("color: %d %d %d\n", colors[i][j].r, colors[i][j].g, colors[i][j].b);
         }
     }
     //XFree (image);
