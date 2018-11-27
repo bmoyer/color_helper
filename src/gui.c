@@ -9,7 +9,7 @@
 #include "color_detect.h"
 
 #define MAX_COLORS   1000
-#define CONTEXT_SIZE 25
+#define CONTEXT_SIZE 20
 
 static Window root;
 static cairo_surface_t *rgb_surface = NULL;
@@ -202,7 +202,7 @@ void get_context_pixels(Display* d, int x, int y) {
 static gboolean update_color(gpointer user_data) {
     int r, g, b, x, y;
     query_pointer(&x, &y);
-    char s2[20];
+    char s2[50];
 
     // get color of pixel under cursor
     get_color(d, x, y, &r, &g, &b);
@@ -212,13 +212,23 @@ static gboolean update_color(gpointer user_data) {
     draw_context_pixels();
 
     // set RGB readout
-    sprintf(s2, "%d, %d, %d", r, g, b);
-    gtk_label_set_label(GTK_LABEL(rgb_label),s2);
+    sprintf(s2, "RGB: (%03d, %03d, %03d)", r, g, b);
+    char *rgb_str = g_strdup_printf ("<span font=\"14\" color=\"black\">"
+                               "%s"
+                             "</span>",
+                             s2);
+    gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
 
     // set name readout
     color c = nearest_color(r, g, b, colors, MAX_COLORS);
 
-    gtk_label_set_label(GTK_LABEL(color_name_label), c.name);
+    char nameLbl[60];
+    sprintf(nameLbl, c.name);
+    char *name_str = g_strdup_printf ("<span font=\"14\" color=\"black\">"
+                               "%s"
+                             "</span>",
+                             nameLbl);
+    gtk_label_set_markup(GTK_LABEL(color_name_label), name_str);
     draw_rect(r, g, b);
 
     return G_SOURCE_REMOVE;
@@ -265,7 +275,8 @@ static void activate (GtkApplication *app, gpointer user_data) {
     GtkWidget *window;
     GtkWidget *frame;
     GtkWidget *context_frame;
-    GtkWidget* box;
+    GtkWidget* hbox;
+    GtkWidget* vbox;
 
     setup_x11();
 
@@ -282,17 +293,25 @@ static void activate (GtkApplication *app, gpointer user_data) {
     context_frame = gtk_frame_new (NULL);
     gtk_frame_set_shadow_type (GTK_FRAME (context_frame), GTK_SHADOW_IN);
 
-    box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_container_add(GTK_CONTAINER(window), box);
+    hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_container_add(GTK_CONTAINER(window), hbox);
 
-    gtk_box_pack_start(GTK_BOX(box), frame, 0, 0, 0);
-    gtk_box_pack_start(GTK_BOX(box), context_frame, 0, 0, 0);
+    gtk_box_pack_start(GTK_BOX(hbox), frame, 0, 0, 0);
+    gtk_box_pack_start(GTK_BOX(hbox), context_frame, 0, 0, 0);
+    gtk_box_pack_start(GTK_BOX(hbox), vbox, 0, 0, 0);
 
     color_name_label = gtk_label_new("Cornflower blue");
-    gtk_box_pack_start(GTK_BOX(box), color_name_label, 0, 0, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), color_name_label, 0, 0, 0);
+
+    gtk_widget_set_valign(color_name_label, GTK_ALIGN_START);
+    gtk_widget_set_halign(color_name_label, GTK_ALIGN_START);
 
     rgb_label = gtk_label_new("127, 127, 127");
-    gtk_box_pack_start(GTK_BOX(box), rgb_label, 0, 0, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), rgb_label, 0, 0, 0);
+
+    gtk_widget_set_valign(rgb_label, GTK_ALIGN_START);
+    gtk_widget_set_halign(rgb_label, GTK_ALIGN_START);
 
     color_drawing_area = gtk_drawing_area_new ();
     context_drawing_area = gtk_drawing_area_new ();
