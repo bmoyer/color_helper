@@ -10,6 +10,7 @@
 
 #define MAX_COLORS   1000
 #define CONTEXT_SIZE 20
+#define CONTEXT_DISPLAY_SIZE 100
 
 static Window root;
 static cairo_surface_t *rgb_surface = NULL;
@@ -99,25 +100,43 @@ static void draw_rect(int r, int g, int b) {
     cr = cairo_create (rgb_surface);
     cairo_set_source_rgb(cr, r/255.0, g/255.0, b/255.0);
 
-    int RECT_SIZE = 100;
-    cairo_rectangle (cr, 0, 0, RECT_SIZE, RECT_SIZE);
+    cairo_rectangle (cr, 0, 0, CONTEXT_DISPLAY_SIZE, CONTEXT_DISPLAY_SIZE);
     cairo_fill (cr);
 
     cairo_destroy (cr);
 
     /* Now invalidate the affected region of the drawing area. */
-    gtk_widget_queue_draw_area (color_drawing_area, 0, 0, RECT_SIZE, RECT_SIZE);
+    gtk_widget_queue_draw_area (color_drawing_area, 0, 0, CONTEXT_DISPLAY_SIZE, CONTEXT_DISPLAY_SIZE);
+}
+
+static void draw_crosshair(cairo_t* rect) {
+            cairo_set_source_rgb(rect, 1.0,1.0,1.0);
+            int SPACING = 10;
+
+            // draw vertical dotted line
+            for(int i = 0; i < CONTEXT_DISPLAY_SIZE/SPACING; i++) {
+                int half = CONTEXT_DISPLAY_SIZE/2;
+                cairo_rectangle(rect, half, i*SPACING, 1, 5);
+            }
+
+            // draw horizontal dotted line
+            for(int i = 0; i < CONTEXT_DISPLAY_SIZE/SPACING; i++) {
+                int half = CONTEXT_DISPLAY_SIZE/2;
+                cairo_rectangle(rect, i*SPACING, half, 5, 1);
+            }
+
+            cairo_fill(rect);
 }
 
 static void draw_context_pixels() {
     cairo_t *cr;
     cr = cairo_create (context_surface);
 
-    int RECT_SIZE = 100;
-    int PIXEL_SCALE = RECT_SIZE/CONTEXT_SIZE;
+    int PIXEL_SCALE = CONTEXT_DISPLAY_SIZE/CONTEXT_SIZE;
 
     for(int x = 0; x < CONTEXT_SIZE; x++) {
         for(int y = 0; y < CONTEXT_SIZE; y++) {
+            draw_crosshair(cr);
             cairo_set_source_rgb(cr,
                     CONTEXT_BUFFER[x][y].r/255.0, 
                     CONTEXT_BUFFER[x][y].g/255.0, 
@@ -128,7 +147,7 @@ static void draw_context_pixels() {
     }
 
     cairo_destroy (cr);
-    gtk_widget_queue_draw_area (context_drawing_area, 0, 0, RECT_SIZE, RECT_SIZE);
+    gtk_widget_queue_draw_area (context_drawing_area, 0, 0, CONTEXT_DISPLAY_SIZE, CONTEXT_DISPLAY_SIZE);
 }
 
 static void close_window (void) {
