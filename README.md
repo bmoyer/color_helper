@@ -10,6 +10,8 @@ Dependencies:
 
 To run:
 ```
+git clone https://github.com/bmoyer/color_helper.git
+cd color_helper
 make -j8
 ./color_helper
 ```
