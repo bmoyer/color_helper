@@ -38,6 +38,34 @@ static void clear_surface (cairo_surface_t* surface) {
     cairo_destroy (cr);
 }
 
+static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
+    g_print("preferences");
+}
+
+static void view_popup_menu(GtkWidget* widget, GdkEventButton* event, gpointer userdata) {
+    GtkWidget *menu = gtk_menu_new();
+    GtkWidget *menuitem = gtk_menu_item_new_with_label("Preferences...");
+
+    g_signal_connect(menuitem, "activate", (GCallback)on_preferences, widget);
+
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+    gtk_widget_show_all(menu);
+    /*
+    gtk_menu_popup_at_widget(GTK_MENU(menu), widget, GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST, 
+        (const GdkEvent*)event);
+    */
+    gtk_menu_popup_at_pointer(GTK_MENU(menu), (const GdkEvent*) event);
+}
+
+static gboolean on_window_clicked(GtkWidget* widget, GdkEventButton* event, gpointer userdata)
+{
+    if (event->type == GDK_BUTTON_PRESS && event->button == 3){
+        view_popup_menu(widget, NULL, userdata);
+    }
+
+    return TRUE;
+}
+
 static gboolean configure_event_cb_rgb (GtkWidget *widget,
                                         GdkEventConfigure *event,
                                         gpointer           data) {
@@ -352,6 +380,9 @@ static void activate (GtkApplication *app, gpointer user_data) {
             G_CALLBACK (draw_cb_context), NULL);
     g_signal_connect (context_drawing_area,"configure-event",
             G_CALLBACK (configure_event_cb_context), NULL);
+
+    g_signal_connect (window, "button-press-event",
+            G_CALLBACK(on_window_clicked), NULL);
 
     // start update thread
     update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
