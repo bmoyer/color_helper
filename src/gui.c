@@ -6,6 +6,8 @@
 #include <X11/Xatom.h>
 #include <X11/Xresource.h>
 
+#include "preferences_dialog.h"
+#include "preferences.h"
 #include "color_detect.h"
 
 #define MAX_COLORS   1000
@@ -39,7 +41,9 @@ static void clear_surface (cairo_surface_t* surface) {
 }
 
 static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
-    g_print("preferences");
+    //GtkWindow* window = userdata;
+    preferences prefs;
+    show_preferences_dialog(&prefs);
 }
 
 static void view_popup_menu(GtkWidget* widget, GdkEventButton* event, gpointer userdata) {
@@ -50,10 +54,6 @@ static void view_popup_menu(GtkWidget* widget, GdkEventButton* event, gpointer u
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
     gtk_widget_show_all(menu);
-    /*
-    gtk_menu_popup_at_widget(GTK_MENU(menu), widget, GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST, 
-        (const GdkEvent*)event);
-    */
     gtk_menu_popup_at_pointer(GTK_MENU(menu), (const GdkEvent*) event);
 }
 
