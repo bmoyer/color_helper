@@ -11,7 +11,7 @@ void on_rgb_toggled(gpointer userdata) {
     */
 }
 
-void show_preferences_dialog(preferences* prefs) {
+void show_preferences_dialog(preferences* prefs, GtkWindow* parent) {
     GtkWidget* dialog = gtk_dialog_new();
     GtkWidget* content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
 
@@ -25,6 +25,7 @@ void show_preferences_dialog(preferences* prefs) {
     gtk_box_pack_start(GTK_BOX(vbox), hex_check, 0, 0, 0);
 
     g_signal_connect(rgb_check, "toggled", (GCallback)on_rgb_toggled, prefs);
+    gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
 
     display_preferences(prefs);
 

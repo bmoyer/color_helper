@@ -3,7 +3,7 @@
 
 #include "preferences.h"
 
-void show_preferences_dialog();
-void display_preferences(preferences* prefs);
+void show_preferences_dialog(preferences* prefs, GtkWindow* parent);
+void display_preferences(preferences* pref);
 
 #endif 
