@@ -3,15 +3,14 @@
 #include "preferences_dialog.h"
 
 //static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
-void on_rgb_toggled(gpointer userdata) {
-    /*
-    preferences* prefs = (preferences*) userdata;
-    prefs->rgb_display = 1 - prefs->rgb_display;
-    printf("prefs.rgb_display=%d", prefs->rgb_display);
-    */
+void on_option_toggled(GtkToggleButton* widget, gpointer userdata) {
+    int* option = userdata;
+    *option = gtk_toggle_button_get_active(widget) ? 1 : 0;
+
+    printf("active: %d\n", *option);
 }
 
-void show_preferences_dialog(GtkWindow* parent, preferences* prefs) {
+void show_preferences_dialog(GtkWindow* parent, preferences* prefs, void* on_preferences_closed_func) {
     GtkWidget* dialog = gtk_dialog_new();
     GtkWidget* content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
 
@@ -21,6 +20,8 @@ void show_preferences_dialog(GtkWindow* parent, preferences* prefs) {
 
     gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
     gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+
+    g_signal_connect (dialog, "delete-event", G_CALLBACK (on_preferences_closed_func), NULL);
 
     display_preferences(prefs);
 
@@ -45,7 +46,10 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     GtkWidget* title_bar_check = gtk_check_button_new_with_label("Title bar");
     gtk_box_pack_start(GTK_BOX(vbox), title_bar_check, 0, 0, 0);
 
-    g_signal_connect(rgb_check, "toggled", (GCallback)on_rgb_toggled, prefs);
+    g_signal_connect(G_OBJECT(rgb_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->rgb_display));
+    g_signal_connect(G_OBJECT(hex_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->hex_display));
+    g_signal_connect(G_OBJECT(hsv_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->hsv_display));
+    g_signal_connect(G_OBJECT(title_bar_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->title_bar));
 }
 
 void display_preferences(preferences* prefs) {

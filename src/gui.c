@@ -27,12 +27,24 @@ GtkWidget *color_drawing_area;
 GtkWidget *context_drawing_area;
 GMainContext *context;
 GThread* update_thread;
+preferences app_preferences;
 
 int running = 1;
 GMutex mutex;
 
 color CONTEXT_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
 color* colors;
+
+static gboolean on_preferences_closed() {
+    printf("Preferences closed\n");
+    return FALSE;
+}
+
+static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
+    GtkWindow* parent_window = userdata;
+    app_preferences.rgb_display = 1;
+    show_preferences_dialog(parent_window, &app_preferences, on_preferences_closed);
+}
 
 static void clear_surface (cairo_surface_t* surface) {
     cairo_t *cr;
@@ -43,12 +55,6 @@ static void clear_surface (cairo_surface_t* surface) {
     cairo_paint (cr);
 
     cairo_destroy (cr);
-}
-
-static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
-    GtkWindow* parent_window = userdata;
-    preferences prefs;
-    show_preferences_dialog(parent_window, &prefs);
 }
 
 static void view_popup_menu(GtkWidget* widget, GdkEventButton* event, gpointer userdata) {
