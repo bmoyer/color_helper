@@ -3,7 +3,8 @@
 
 #include "preferences.h"
 
-void show_preferences_dialog(preferences* prefs, GtkWindow* parent);
+void show_preferences_dialog(GtkWindow* parent, preferences* prefs);
 void display_preferences(preferences* pref);
+void add_view_tab(GtkWidget* notebook, preferences* prefs);
 
 #endif 

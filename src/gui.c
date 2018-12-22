@@ -48,7 +48,7 @@ static void clear_surface (cairo_surface_t* surface) {
 static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
     GtkWindow* parent_window = userdata;
     preferences prefs;
-    show_preferences_dialog(&prefs, parent_window);
+    show_preferences_dialog(parent_window, &prefs);
 }
 
 static void view_popup_menu(GtkWidget* widget, GdkEventButton* event, gpointer userdata) {
