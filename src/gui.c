@@ -265,6 +265,9 @@ void get_context_pixels(Display* d, int x, int y) {
 }
 
 static gboolean update_color(gpointer user_data) {
+    if(!running)
+        return G_SOURCE_REMOVE;
+
     int r, g, b, x, y;
     query_pointer(&x, &y);
     char s2[50];
@@ -296,6 +299,7 @@ static gboolean update_color(gpointer user_data) {
     gtk_label_set_markup(GTK_LABEL(color_name_label), name_str);
     draw_rect(r, g, b);
 
+
     return G_SOURCE_REMOVE;
 }
 
@@ -309,11 +313,11 @@ static gpointer update_thread_func (gpointer user_data) {
             g_thread_exit(NULL);
         }
         g_mutex_unlock(&mutex);
-        g_usleep(50000);
         source = g_idle_source_new();
         g_source_set_callback(source, update_color, NULL, NULL);
         g_source_attach(source, context);
         g_source_unref(source);
+        g_usleep(50000);
     }
 
     return NULL;
@@ -408,17 +412,15 @@ static void activate (GtkApplication *app, gpointer user_data) {
     g_signal_connect (main_window, "button-press-event",
             G_CALLBACK(on_window_clicked), NULL);
 
-    // start update thread
-    update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
-
     gtk_widget_show_all (main_window);
 }
 
 int main (int argc, char **argv) {
+    g_mutex_init(&mutex);
+    update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
     colors = read_colors();
     GtkApplication *app;
     int status;
-    g_mutex_init(&mutex);
 
     app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
     g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
