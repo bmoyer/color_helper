@@ -19,12 +19,17 @@ static cairo_surface_t *rgb_surface = NULL;
 static cairo_surface_t *context_surface = NULL;
 
 Display* d;
-GThread* update_thread;
+
+GtkWidget *main_window;
 GtkWidget* color_name_label;
 GtkWidget* rgb_label;
 GtkWidget *color_drawing_area;
 GtkWidget *context_drawing_area;
 GMainContext *context;
+GThread* update_thread;
+
+int running = 1;
+GMutex mutex;
 
 color CONTEXT_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
 color* colors;
@@ -178,6 +183,13 @@ static void draw_context_pixels() {
     gtk_widget_queue_draw_area (context_drawing_area, 0, 0, CONTEXT_DISPLAY_SIZE, CONTEXT_DISPLAY_SIZE);
 }
 
+static gboolean delete_event(GtkWidget* w, GdkEvent* e, gpointer d) {
+    g_mutex_lock(&mutex);
+    running = 0;
+    g_mutex_unlock(&mutex);
+    return FALSE;
+}
+
 static void close_window (void) {
     if (rgb_surface)
         cairo_surface_destroy (rgb_surface);
@@ -285,6 +297,12 @@ static gpointer update_thread_func (gpointer user_data) {
     GSource *source;
 
     for (;;) {
+        g_mutex_lock(&mutex);
+        if(!running) {
+            g_mutex_unlock(&mutex);
+            g_thread_exit(NULL);
+        }
+        g_mutex_unlock(&mutex);
         g_usleep(50000);
         source = g_idle_source_new();
         g_source_set_callback(source, update_color, NULL, NULL);
@@ -319,7 +337,6 @@ void setup_x11() {
 }
 
 static void activate (GtkApplication *app, gpointer user_data) {
-    GtkWidget *window;
     GtkWidget *frame;
     GtkWidget *context_frame;
     GtkWidget* hbox;
@@ -327,12 +344,13 @@ static void activate (GtkApplication *app, gpointer user_data) {
 
     setup_x11();
 
-    window = gtk_application_window_new (app);
-    gtk_window_set_title (GTK_WINDOW (window), "color helper");
+    main_window = gtk_application_window_new (app);
+    gtk_window_set_title (GTK_WINDOW (main_window), "Color Helper");
 
-    g_signal_connect (window, "destroy", G_CALLBACK (close_window), NULL);
+    g_signal_connect (main_window, "destroy", G_CALLBACK (close_window), NULL);
+    g_signal_connect (main_window, "delete-event", G_CALLBACK (delete_event), NULL);
 
-    gtk_container_set_border_width (GTK_CONTAINER (window), 8);
+    gtk_container_set_border_width (GTK_CONTAINER (main_window), 8);
 
     frame = gtk_frame_new (NULL);
     gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_IN);
@@ -342,7 +360,7 @@ static void activate (GtkApplication *app, gpointer user_data) {
 
     hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-    gtk_container_add(GTK_CONTAINER(window), hbox);
+    gtk_container_add(GTK_CONTAINER(main_window), hbox);
 
     gtk_box_pack_start(GTK_BOX(hbox), frame, 0, 0, 0);
     gtk_box_pack_start(GTK_BOX(hbox), context_frame, 0, 0, 0);
@@ -381,25 +399,27 @@ static void activate (GtkApplication *app, gpointer user_data) {
     g_signal_connect (context_drawing_area,"configure-event",
             G_CALLBACK (configure_event_cb_context), NULL);
 
-    g_signal_connect (window, "button-press-event",
+    g_signal_connect (main_window, "button-press-event",
             G_CALLBACK(on_window_clicked), NULL);
 
     // start update thread
     update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
 
-    gtk_widget_show_all (window);
+    gtk_widget_show_all (main_window);
 }
 
 int main (int argc, char **argv) {
     colors = read_colors();
     GtkApplication *app;
     int status;
+    g_mutex_init(&mutex);
 
     app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
     g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
     status = g_application_run (G_APPLICATION (app), argc, argv);
     g_thread_join(update_thread);
     g_object_unref (app);
+    //gtk_widget_destroy(main_window);
 
     return status;
 }
