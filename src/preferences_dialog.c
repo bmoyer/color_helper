@@ -2,7 +2,6 @@
 
 #include "preferences_dialog.h"
 
-//static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
 void on_option_toggled(GtkToggleButton* widget, gpointer userdata) {
     int* option = userdata;
     *option = gtk_toggle_button_get_active(widget) ? 1 : 0;
@@ -10,7 +9,7 @@ void on_option_toggled(GtkToggleButton* widget, gpointer userdata) {
     printf("active: %d\n", *option);
 }
 
-void show_preferences_dialog(GtkWindow* parent, preferences* prefs, void* on_preferences_closed_func) {
+void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* on_preferences_closed_func)(GtkWidget*, GdkEvent*, gpointer)) {
     GtkWidget* dialog = gtk_dialog_new();
     GtkWidget* content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
 
@@ -21,7 +20,7 @@ void show_preferences_dialog(GtkWindow* parent, preferences* prefs, void* on_pre
     gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
     gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
 
-    g_signal_connect (dialog, "delete-event", G_CALLBACK (on_preferences_closed_func), NULL);
+    g_signal_connect (dialog, "delete-event", G_CALLBACK (on_preferences_closed_func), (gpointer)prefs);
 
     display_preferences(prefs);
 

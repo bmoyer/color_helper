@@ -30,20 +30,38 @@ GThread* update_thread;
 preferences app_preferences;
 
 int running = 1;
-GMutex mutex;
+GMutex running_mutex;
 
 color CONTEXT_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
 color* colors;
 
-static gboolean on_preferences_closed() {
+static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpointer user_data) {
     printf("Preferences closed\n");
+    //int* x = user_data;
+    //printf("x (%p) was: %d\n", x, *x);
+    preferences* prefs = (preferences*) user_data;
+    app_preferences = *prefs;
+    printf("rgb_display=%d\n", prefs->rgb_display);
+    printf("hsv_display=%d\n", prefs->hsv_display);
+    printf("hex_display=%d\n", prefs->hex_display);
+    printf("title_bar=%d\n", prefs->title_bar);
+    free(prefs);
+
+    /*
+    gtk_widget_hide(color_drawing_area);
+    gtk_widget_hide(context_drawing_area);
+    gtk_widget_hide(rgb_label);
+    gtk_widget_hide(color_name_label);
+    */
     return FALSE;
 }
 
 static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
     GtkWindow* parent_window = userdata;
-    app_preferences.rgb_display = 1;
-    show_preferences_dialog(parent_window, &app_preferences, on_preferences_closed);
+    // create prefs object from on-disk prefs
+    // object comes back to on_preferences_closed, and is then saved/swapped in
+    preferences* prefs = malloc(sizeof(preferences));
+    show_preferences_dialog(parent_window, prefs, on_preferences_closed);
 }
 
 static void clear_surface (cairo_surface_t* surface) {
@@ -61,7 +79,7 @@ static void view_popup_menu(GtkWidget* widget, GdkEventButton* event, gpointer u
     GtkWidget *menu = gtk_menu_new();
     GtkWidget *menuitem = gtk_menu_item_new_with_label("Preferences...");
 
-    g_signal_connect(menuitem, "activate", (GCallback)on_preferences, widget);
+    g_signal_connect(menuitem, "activate", (GCallback)on_preferences, NULL);
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
     gtk_widget_show_all(menu);
@@ -72,6 +90,10 @@ static gboolean on_window_clicked(GtkWidget* widget, GdkEventButton* event, gpoi
 {
     if (event->type == GDK_BUTTON_PRESS && event->button == 3){
         view_popup_menu(widget, NULL, userdata);
+    }
+
+    if (event->type == GDK_BUTTON_PRESS && event->button == 1){
+        gtk_window_begin_move_drag(GTK_WINDOW(widget), event->button, event->x_root, event->y_root, event->time);
     }
 
     return TRUE;
@@ -190,9 +212,9 @@ static void draw_context_pixels() {
 }
 
 static gboolean delete_event(GtkWidget* w, GdkEvent* e, gpointer d) {
-    g_mutex_lock(&mutex);
+    g_mutex_lock(&running_mutex);
     running = 0;
-    g_mutex_unlock(&mutex);
+    g_mutex_unlock(&running_mutex);
     return FALSE;
 }
 
@@ -281,18 +303,20 @@ static gboolean update_color(gpointer user_data) {
 
     // set RGB readout
     sprintf(s2, "RGB: (%03d, %03d, %03d)", r, g, b);
-    char *rgb_str = g_strdup_printf ("<span font=\"14\" color=\"black\">"
+    char *rgb_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
                                "%s"
                              "</span>",
                              s2);
-    gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
+
+    if(app_preferences.rgb_display)
+        gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
 
     // set name readout
     color c = nearest_color(r, g, b, colors, MAX_COLORS);
 
     char nameLbl[60];
     sprintf(nameLbl, c.name);
-    char *name_str = g_strdup_printf ("<span font=\"14\" color=\"black\">"
+    char *name_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
                                "%s"
                              "</span>",
                              nameLbl);
@@ -307,12 +331,12 @@ static gpointer update_thread_func (gpointer user_data) {
     GSource *source;
 
     for (;;) {
-        g_mutex_lock(&mutex);
+        g_mutex_lock(&running_mutex);
         if(!running) {
-            g_mutex_unlock(&mutex);
+            g_mutex_unlock(&running_mutex);
             g_thread_exit(NULL);
         }
-        g_mutex_unlock(&mutex);
+        g_mutex_unlock(&running_mutex);
         source = g_idle_source_new();
         g_source_set_callback(source, update_color, NULL, NULL);
         g_source_attach(source, context);
@@ -416,7 +440,7 @@ static void activate (GtkApplication *app, gpointer user_data) {
 }
 
 int main (int argc, char **argv) {
-    g_mutex_init(&mutex);
+    g_mutex_init(&running_mutex);
     update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
     colors = read_colors();
     GtkApplication *app;
@@ -427,7 +451,6 @@ int main (int argc, char **argv) {
     status = g_application_run (G_APPLICATION (app), argc, argv);
     g_thread_join(update_thread);
     g_object_unref (app);
-    //gtk_widget_destroy(main_window);
 
     return status;
 }
