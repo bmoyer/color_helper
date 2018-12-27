@@ -6,6 +6,8 @@
 #include <X11/Xatom.h>
 #include <X11/Xresource.h>
 
+#include "preferences_dialog.h"
+#include "preferences.h"
 #include "color_detect.h"
 
 #define MAX_COLORS   1000
@@ -17,15 +19,56 @@ static cairo_surface_t *rgb_surface = NULL;
 static cairo_surface_t *context_surface = NULL;
 
 Display* d;
-GThread* update_thread;
+
+GtkWidget *main_window;
 GtkWidget* color_name_label;
 GtkWidget* rgb_label;
+GtkWidget* hex_label;
 GtkWidget *color_drawing_area;
 GtkWidget *context_drawing_area;
 GMainContext *context;
+GThread* update_thread;
+preferences app_preferences;
+
+int running = 1;
+GMutex running_mutex;
 
 color CONTEXT_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
 color* colors;
+
+void refresh_preferences() {
+    app_preferences.rgb_display ? gtk_widget_show(rgb_label) :
+                                  gtk_widget_hide(rgb_label);
+
+    app_preferences.hex_display ? gtk_widget_show(hex_label) :
+                                  gtk_widget_hide(hex_label);
+
+    app_preferences.name_display ? gtk_widget_show(color_name_label) :
+                                  gtk_widget_hide(color_name_label);
+
+    gtk_window_set_decorated((GtkWindow*)main_window, app_preferences.title_bar);
+}
+
+static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpointer user_data) {
+    //preferences* prefs = (preferences*) user_data;
+    //app_preferences = *prefs;
+    printf("on_preferences_closed: ");
+    print(&app_preferences);
+    refresh_preferences();
+
+    /*
+    gtk_widget_hide(color_drawing_area);
+    gtk_widget_hide(context_drawing_area);
+    gtk_widget_hide(color_name_label);
+    */
+    return FALSE;
+}
+
+static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
+    // create prefs object from on-disk prefs
+    // object comes back to on_preferences_closed, and is then saved/swapped in
+    show_preferences_dialog((GtkWindow*)main_window, &app_preferences, on_preferences_closed);
+}
 
 static void clear_surface (cairo_surface_t* surface) {
     cairo_t *cr;
@@ -36,6 +79,30 @@ static void clear_surface (cairo_surface_t* surface) {
     cairo_paint (cr);
 
     cairo_destroy (cr);
+}
+
+static void view_popup_menu(GtkWidget* widget, GdkEventButton* event, gpointer userdata) {
+    GtkWidget *menu = gtk_menu_new();
+    GtkWidget *menuitem = gtk_menu_item_new_with_label("Preferences...");
+
+    g_signal_connect(menuitem, "activate", (GCallback)on_preferences, NULL);
+
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+    gtk_widget_show_all(menu);
+    gtk_menu_popup_at_pointer(GTK_MENU(menu), (const GdkEvent*) event);
+}
+
+static gboolean on_window_clicked(GtkWidget* widget, GdkEventButton* event, gpointer userdata)
+{
+    if (event->type == GDK_BUTTON_PRESS && event->button == 3){
+        view_popup_menu(widget, NULL, userdata);
+    }
+
+    if (event->type == GDK_BUTTON_PRESS && event->button == 1){
+        gtk_window_begin_move_drag(GTK_WINDOW(widget), event->button, event->x_root, event->y_root, event->time);
+    }
+
+    return TRUE;
 }
 
 static gboolean configure_event_cb_rgb (GtkWidget *widget,
@@ -150,6 +217,13 @@ static void draw_context_pixels() {
     gtk_widget_queue_draw_area (context_drawing_area, 0, 0, CONTEXT_DISPLAY_SIZE, CONTEXT_DISPLAY_SIZE);
 }
 
+static gboolean delete_event(GtkWidget* w, GdkEvent* e, gpointer d) {
+    g_mutex_lock(&running_mutex);
+    running = 0;
+    g_mutex_unlock(&running_mutex);
+    return FALSE;
+}
+
 static void close_window (void) {
     if (rgb_surface)
         cairo_surface_destroy (rgb_surface);
@@ -219,9 +293,12 @@ void get_context_pixels(Display* d, int x, int y) {
 }
 
 static gboolean update_color(gpointer user_data) {
+    if(!running)
+        return G_SOURCE_REMOVE;
+
     int r, g, b, x, y;
     query_pointer(&x, &y);
-    char s2[50];
+    char s2[50] = "";
 
     // get color of pixel under cursor
     get_color(d, x, y, &r, &g, &b);
@@ -232,23 +309,31 @@ static gboolean update_color(gpointer user_data) {
 
     // set RGB readout
     sprintf(s2, "RGB: (%03d, %03d, %03d)", r, g, b);
-    char *rgb_str = g_strdup_printf ("<span font=\"14\" color=\"black\">"
+
+    char *rgb_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
                                "%s"
                              "</span>",
                              s2);
-    gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
 
+    gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
     // set name readout
     color c = nearest_color(r, g, b, colors, MAX_COLORS);
 
     char nameLbl[60];
     sprintf(nameLbl, c.name);
-    char *name_str = g_strdup_printf ("<span font=\"14\" color=\"black\">"
+    char *name_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
                                "%s"
                              "</span>",
                              nameLbl);
     gtk_label_set_markup(GTK_LABEL(color_name_label), name_str);
+
+    char *hex_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
+                               "Hex: %03X %03X %03X"
+                             "</span>",
+                             r, g, b);
+    gtk_label_set_markup(GTK_LABEL(hex_label), hex_str);
     draw_rect(r, g, b);
+
 
     return G_SOURCE_REMOVE;
 }
@@ -257,11 +342,17 @@ static gpointer update_thread_func (gpointer user_data) {
     GSource *source;
 
     for (;;) {
-        g_usleep(50000);
+        g_mutex_lock(&running_mutex);
+        if(!running) {
+            g_mutex_unlock(&running_mutex);
+            g_thread_exit(NULL);
+        }
+        g_mutex_unlock(&running_mutex);
         source = g_idle_source_new();
         g_source_set_callback(source, update_color, NULL, NULL);
         g_source_attach(source, context);
         g_source_unref(source);
+        g_usleep(50000);
     }
 
     return NULL;
@@ -291,7 +382,6 @@ void setup_x11() {
 }
 
 static void activate (GtkApplication *app, gpointer user_data) {
-    GtkWidget *window;
     GtkWidget *frame;
     GtkWidget *context_frame;
     GtkWidget* hbox;
@@ -299,12 +389,13 @@ static void activate (GtkApplication *app, gpointer user_data) {
 
     setup_x11();
 
-    window = gtk_application_window_new (app);
-    gtk_window_set_title (GTK_WINDOW (window), "color helper");
+    main_window = gtk_application_window_new (app);
+    gtk_window_set_title (GTK_WINDOW (main_window), "Color Helper");
 
-    g_signal_connect (window, "destroy", G_CALLBACK (close_window), NULL);
+    g_signal_connect (main_window, "destroy", G_CALLBACK (close_window), NULL);
+    g_signal_connect (main_window, "delete-event", G_CALLBACK (delete_event), NULL);
 
-    gtk_container_set_border_width (GTK_CONTAINER (window), 8);
+    gtk_container_set_border_width (GTK_CONTAINER (main_window), 8);
 
     frame = gtk_frame_new (NULL);
     gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_IN);
@@ -314,7 +405,7 @@ static void activate (GtkApplication *app, gpointer user_data) {
 
     hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-    gtk_container_add(GTK_CONTAINER(window), hbox);
+    gtk_container_add(GTK_CONTAINER(main_window), hbox);
 
     gtk_box_pack_start(GTK_BOX(hbox), frame, 0, 0, 0);
     gtk_box_pack_start(GTK_BOX(hbox), context_frame, 0, 0, 0);
@@ -331,6 +422,12 @@ static void activate (GtkApplication *app, gpointer user_data) {
 
     gtk_widget_set_valign(rgb_label, GTK_ALIGN_START);
     gtk_widget_set_halign(rgb_label, GTK_ALIGN_START);
+
+    hex_label = gtk_label_new("FF FF FF");
+    gtk_box_pack_start(GTK_BOX(vbox), hex_label, 0, 0, 0);
+
+    gtk_widget_set_valign(hex_label, GTK_ALIGN_START);
+    gtk_widget_set_halign(hex_label, GTK_ALIGN_START);
 
     color_drawing_area = gtk_drawing_area_new ();
     context_drawing_area = gtk_drawing_area_new ();
@@ -353,13 +450,23 @@ static void activate (GtkApplication *app, gpointer user_data) {
     g_signal_connect (context_drawing_area,"configure-event",
             G_CALLBACK (configure_event_cb_context), NULL);
 
-    // start update thread
-    update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
+    g_signal_connect (main_window, "button-press-event",
+            G_CALLBACK(on_window_clicked), NULL);
 
-    gtk_widget_show_all (window);
+    gtk_widget_show_all (main_window);
+    refresh_preferences();
+}
+
+void load_preferences() {
+    preferences* prefs = read_preferences();
+    app_preferences = *prefs;
+    free(prefs);
 }
 
 int main (int argc, char **argv) {
+    g_mutex_init(&running_mutex);
+    load_preferences();
+    update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
     colors = read_colors();
     GtkApplication *app;
     int status;
