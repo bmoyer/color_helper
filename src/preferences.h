@@ -5,6 +5,7 @@ typedef struct {
     int rgb_display;
     int hex_display;
     int hsv_display;
+    int name_display;
     int title_bar;
 
 } preferences;

@@ -6,6 +6,7 @@ GtkWidget* viewTabLabel;
 GtkWidget* rgb_check;
 GtkWidget* hex_check;
 GtkWidget* hsv_check;
+GtkWidget* name_check;
 GtkWidget* title_bar_check;
 
 void on_option_toggled(GtkToggleButton* widget, gpointer userdata) {
@@ -44,7 +45,10 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     gtk_box_pack_start(GTK_BOX(vbox), hex_check, 0, 0, 0);
 
     hsv_check = gtk_check_button_new_with_label("HSV display");
-    gtk_box_pack_start(GTK_BOX(vbox), hsv_check, 0, 0, 0);
+    // gtk_box_pack_start(GTK_BOX(vbox), hsv_check, 0, 0, 0); // not implemented yet
+    
+    name_check = gtk_check_button_new_with_label("Name display");
+    gtk_box_pack_start(GTK_BOX(vbox), name_check, 0, 0, 0);
 
     title_bar_check = gtk_check_button_new_with_label("Title bar");
     gtk_box_pack_start(GTK_BOX(vbox), title_bar_check, 0, 0, 0);
@@ -52,6 +56,7 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     g_signal_connect(G_OBJECT(rgb_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->rgb_display));
     g_signal_connect(G_OBJECT(hex_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->hex_display));
     g_signal_connect(G_OBJECT(hsv_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->hsv_display));
+    g_signal_connect(G_OBJECT(name_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->name_display));
     g_signal_connect(G_OBJECT(title_bar_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->title_bar));
 }
 
@@ -59,6 +64,7 @@ void display_preferences(preferences* prefs) {
     gtk_toggle_button_set_active((GtkToggleButton*)rgb_check, prefs->rgb_display);
     gtk_toggle_button_set_active((GtkToggleButton*)hex_check, prefs->hex_display);
     gtk_toggle_button_set_active((GtkToggleButton*)hsv_check, prefs->hsv_display);
+    gtk_toggle_button_set_active((GtkToggleButton*)name_check, prefs->name_display);
     gtk_toggle_button_set_active((GtkToggleButton*)title_bar_check, prefs->title_bar);
 }
 

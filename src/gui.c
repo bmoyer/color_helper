@@ -23,6 +23,7 @@ Display* d;
 GtkWidget *main_window;
 GtkWidget* color_name_label;
 GtkWidget* rgb_label;
+GtkWidget* hex_label;
 GtkWidget *color_drawing_area;
 GtkWidget *context_drawing_area;
 GMainContext *context;
@@ -35,16 +36,29 @@ GMutex running_mutex;
 color CONTEXT_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
 color* colors;
 
+void refresh_preferences() {
+    app_preferences.rgb_display ? gtk_widget_show(rgb_label) :
+                                  gtk_widget_hide(rgb_label);
+
+    app_preferences.hex_display ? gtk_widget_show(hex_label) :
+                                  gtk_widget_hide(hex_label);
+
+    app_preferences.name_display ? gtk_widget_show(color_name_label) :
+                                  gtk_widget_hide(color_name_label);
+
+    gtk_window_set_decorated((GtkWindow*)main_window, app_preferences.title_bar);
+}
+
 static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpointer user_data) {
-    preferences* prefs = (preferences*) user_data;
-    app_preferences = *prefs;
+    //preferences* prefs = (preferences*) user_data;
+    //app_preferences = *prefs;
     printf("on_preferences_closed: ");
-    print(prefs);
+    print(&app_preferences);
+    refresh_preferences();
 
     /*
     gtk_widget_hide(color_drawing_area);
     gtk_widget_hide(context_drawing_area);
-    gtk_widget_hide(rgb_label);
     gtk_widget_hide(color_name_label);
     */
     return FALSE;
@@ -284,7 +298,7 @@ static gboolean update_color(gpointer user_data) {
 
     int r, g, b, x, y;
     query_pointer(&x, &y);
-    char s2[50];
+    char s2[50] = "";
 
     // get color of pixel under cursor
     get_color(d, x, y, &r, &g, &b);
@@ -295,14 +309,13 @@ static gboolean update_color(gpointer user_data) {
 
     // set RGB readout
     sprintf(s2, "RGB: (%03d, %03d, %03d)", r, g, b);
+
     char *rgb_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
                                "%s"
                              "</span>",
                              s2);
 
-    if(app_preferences.rgb_display)
-        gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
-
+    gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
     // set name readout
     color c = nearest_color(r, g, b, colors, MAX_COLORS);
 
@@ -313,6 +326,12 @@ static gboolean update_color(gpointer user_data) {
                              "</span>",
                              nameLbl);
     gtk_label_set_markup(GTK_LABEL(color_name_label), name_str);
+
+    char *hex_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
+                               "Hex: %03X %03X %03X"
+                             "</span>",
+                             r, g, b);
+    gtk_label_set_markup(GTK_LABEL(hex_label), hex_str);
     draw_rect(r, g, b);
 
 
@@ -404,6 +423,12 @@ static void activate (GtkApplication *app, gpointer user_data) {
     gtk_widget_set_valign(rgb_label, GTK_ALIGN_START);
     gtk_widget_set_halign(rgb_label, GTK_ALIGN_START);
 
+    hex_label = gtk_label_new("FF FF FF");
+    gtk_box_pack_start(GTK_BOX(vbox), hex_label, 0, 0, 0);
+
+    gtk_widget_set_valign(hex_label, GTK_ALIGN_START);
+    gtk_widget_set_halign(hex_label, GTK_ALIGN_START);
+
     color_drawing_area = gtk_drawing_area_new ();
     context_drawing_area = gtk_drawing_area_new ();
 
@@ -429,6 +454,7 @@ static void activate (GtkApplication *app, gpointer user_data) {
             G_CALLBACK(on_window_clicked), NULL);
 
     gtk_widget_show_all (main_window);
+    refresh_preferences();
 }
 
 void load_preferences() {
