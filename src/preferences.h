@@ -9,4 +9,7 @@ typedef struct {
 
 } preferences;
 
+preferences* read_preferences();
+void print(preferences* preferences);
+
 #endif

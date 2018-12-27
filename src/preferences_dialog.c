@@ -2,11 +2,15 @@
 
 #include "preferences_dialog.h"
 
+GtkWidget* viewTabLabel;
+GtkWidget* rgb_check;
+GtkWidget* hex_check;
+GtkWidget* hsv_check;
+GtkWidget* title_bar_check;
+
 void on_option_toggled(GtkToggleButton* widget, gpointer userdata) {
     int* option = userdata;
     *option = gtk_toggle_button_get_active(widget) ? 1 : 0;
-
-    printf("active: %d\n", *option);
 }
 
 void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* on_preferences_closed_func)(GtkWidget*, GdkEvent*, gpointer)) {
@@ -30,19 +34,19 @@ void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* o
 void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
 
-    GtkWidget* viewTabLabel = gtk_label_new("View");
+    viewTabLabel = gtk_label_new("View");
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, viewTabLabel);
 
-    GtkWidget* rgb_check = gtk_check_button_new_with_label("RGB display");
+    rgb_check = gtk_check_button_new_with_label("RGB display");
     gtk_box_pack_start(GTK_BOX(vbox), rgb_check, 0, 0, 0);
 
-    GtkWidget* hex_check = gtk_check_button_new_with_label("Hex display");
+    hex_check = gtk_check_button_new_with_label("Hex display");
     gtk_box_pack_start(GTK_BOX(vbox), hex_check, 0, 0, 0);
 
-    GtkWidget* hsv_check = gtk_check_button_new_with_label("HSV display");
+    hsv_check = gtk_check_button_new_with_label("HSV display");
     gtk_box_pack_start(GTK_BOX(vbox), hsv_check, 0, 0, 0);
 
-    GtkWidget* title_bar_check = gtk_check_button_new_with_label("Title bar");
+    title_bar_check = gtk_check_button_new_with_label("Title bar");
     gtk_box_pack_start(GTK_BOX(vbox), title_bar_check, 0, 0, 0);
 
     g_signal_connect(G_OBJECT(rgb_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->rgb_display));
@@ -52,4 +56,9 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
 }
 
 void display_preferences(preferences* prefs) {
+    gtk_toggle_button_set_active((GtkToggleButton*)rgb_check, prefs->rgb_display);
+    gtk_toggle_button_set_active((GtkToggleButton*)hex_check, prefs->hex_display);
+    gtk_toggle_button_set_active((GtkToggleButton*)hsv_check, prefs->hsv_display);
+    gtk_toggle_button_set_active((GtkToggleButton*)title_bar_check, prefs->title_bar);
 }
+

@@ -36,16 +36,10 @@ color CONTEXT_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
 color* colors;
 
 static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpointer user_data) {
-    printf("Preferences closed\n");
-    //int* x = user_data;
-    //printf("x (%p) was: %d\n", x, *x);
     preferences* prefs = (preferences*) user_data;
     app_preferences = *prefs;
-    printf("rgb_display=%d\n", prefs->rgb_display);
-    printf("hsv_display=%d\n", prefs->hsv_display);
-    printf("hex_display=%d\n", prefs->hex_display);
-    printf("title_bar=%d\n", prefs->title_bar);
-    free(prefs);
+    printf("on_preferences_closed: ");
+    print(prefs);
 
     /*
     gtk_widget_hide(color_drawing_area);
@@ -57,11 +51,9 @@ static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpoint
 }
 
 static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
-    GtkWindow* parent_window = userdata;
     // create prefs object from on-disk prefs
     // object comes back to on_preferences_closed, and is then saved/swapped in
-    preferences* prefs = malloc(sizeof(preferences));
-    show_preferences_dialog(parent_window, prefs, on_preferences_closed);
+    show_preferences_dialog((GtkWindow*)main_window, &app_preferences, on_preferences_closed);
 }
 
 static void clear_surface (cairo_surface_t* surface) {
@@ -439,8 +431,15 @@ static void activate (GtkApplication *app, gpointer user_data) {
     gtk_widget_show_all (main_window);
 }
 
+void load_preferences() {
+    preferences* prefs = read_preferences();
+    app_preferences = *prefs;
+    free(prefs);
+}
+
 int main (int argc, char **argv) {
     g_mutex_init(&running_mutex);
+    load_preferences();
     update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
     colors = read_colors();
     GtkApplication *app;
