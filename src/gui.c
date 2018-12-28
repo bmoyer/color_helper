@@ -50,17 +50,9 @@ void refresh_preferences() {
 }
 
 static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpointer user_data) {
-    //preferences* prefs = (preferences*) user_data;
-    //app_preferences = *prefs;
-    printf("on_preferences_closed: ");
-    print(&app_preferences);
+    preferences_write(&app_preferences);
     refresh_preferences();
 
-    /*
-    gtk_widget_hide(color_drawing_area);
-    gtk_widget_hide(context_drawing_area);
-    gtk_widget_hide(color_name_label);
-    */
     return FALSE;
 }
 
@@ -458,7 +450,7 @@ static void activate (GtkApplication *app, gpointer user_data) {
 }
 
 void load_preferences() {
-    preferences* prefs = read_preferences();
+    preferences* prefs = preferences_read();
     app_preferences = *prefs;
     free(prefs);
 }
