@@ -62,6 +62,11 @@ static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
     show_preferences_dialog((GtkWindow*)main_window, &app_preferences, on_preferences_closed);
 }
 
+static void on_quit(GtkWidget* menu_item, gpointer userdata) {
+    //gtk_window_close((GtkWindow*)&root);
+    exit(0);
+}
+
 static void clear_surface (cairo_surface_t* surface) {
     cairo_t *cr;
 
@@ -76,10 +81,13 @@ static void clear_surface (cairo_surface_t* surface) {
 static void view_popup_menu(GtkWidget* widget, GdkEventButton* event, gpointer userdata) {
     GtkWidget *menu = gtk_menu_new();
     GtkWidget *menuitem = gtk_menu_item_new_with_label("Preferences...");
+    GtkWidget *close_item = gtk_menu_item_new_with_label("Close");
 
     g_signal_connect(menuitem, "activate", (GCallback)on_preferences, NULL);
+    g_signal_connect(close_item, "activate", (GCallback)on_quit, NULL);
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), close_item);
     gtk_widget_show_all(menu);
     gtk_menu_popup_at_pointer(GTK_MENU(menu), (const GdkEvent*) event);
 }
@@ -195,7 +203,9 @@ static void draw_context_pixels() {
 
     for(int x = 0; x < CONTEXT_SIZE; x++) {
         for(int y = 0; y < CONTEXT_SIZE; y++) {
-            draw_crosshair(cr);
+            if(app_preferences.draw_crosshair) {
+                draw_crosshair(cr);
+            }
             cairo_set_source_rgb(cr,
                     CONTEXT_BUFFER[x][y].r/255.0, 
                     CONTEXT_BUFFER[x][y].g/255.0, 
@@ -326,6 +336,9 @@ static gboolean update_color(gpointer user_data) {
     gtk_label_set_markup(GTK_LABEL(hex_label), hex_str);
     draw_rect(r, g, b);
 
+    g_free(rgb_str);
+    g_free(name_str);
+    g_free(hex_str);
 
     return G_SOURCE_REMOVE;
 }
@@ -468,6 +481,7 @@ int main (int argc, char **argv) {
     status = g_application_run (G_APPLICATION (app), argc, argv);
     g_thread_join(update_thread);
     g_object_unref (app);
+    free(colors);
 
     return status;
 }

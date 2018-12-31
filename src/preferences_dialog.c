@@ -8,6 +8,7 @@ GtkWidget* hex_check;
 GtkWidget* hsv_check;
 GtkWidget* name_check;
 GtkWidget* title_bar_check;
+GtkWidget* draw_crosshair_check;
 
 void on_option_toggled(GtkToggleButton* widget, gpointer userdata) {
     int* option = userdata;
@@ -53,11 +54,15 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     title_bar_check = gtk_check_button_new_with_label("Title bar");
     gtk_box_pack_start(GTK_BOX(vbox), title_bar_check, 0, 0, 0);
 
+    draw_crosshair_check = gtk_check_button_new_with_label("Draw crosshair");
+    gtk_box_pack_start(GTK_BOX(vbox), draw_crosshair_check, 0, 0, 0);
+
     g_signal_connect(G_OBJECT(rgb_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->rgb_display));
     g_signal_connect(G_OBJECT(hex_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->hex_display));
     g_signal_connect(G_OBJECT(hsv_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->hsv_display));
     g_signal_connect(G_OBJECT(name_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->name_display));
     g_signal_connect(G_OBJECT(title_bar_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->title_bar));
+    g_signal_connect(G_OBJECT(draw_crosshair_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->draw_crosshair));
 }
 
 void display_preferences(preferences* prefs) {
@@ -66,5 +71,6 @@ void display_preferences(preferences* prefs) {
     gtk_toggle_button_set_active((GtkToggleButton*)hsv_check, prefs->hsv_display);
     gtk_toggle_button_set_active((GtkToggleButton*)name_check, prefs->name_display);
     gtk_toggle_button_set_active((GtkToggleButton*)title_bar_check, prefs->title_bar);
+    gtk_toggle_button_set_active((GtkToggleButton*)draw_crosshair_check, prefs->draw_crosshair);
 }
 
