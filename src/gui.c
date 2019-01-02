@@ -5,14 +5,21 @@
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 #include <X11/Xresource.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 #include "preferences_dialog.h"
 #include "preferences.h"
 #include "color_detect.h"
+#include "util.h"
 
 #define MAX_COLORS   1000
-#define CONTEXT_SIZE 20
+#define CONTEXT_SIZE 30
 #define CONTEXT_DISPLAY_SIZE 100
+
+#define DEBUG 0
+#define LOG_TID() debug_print("%s::%s\tTID = %ld\n", __FILE__, __func__, syscall(SYS_gettid));
 
 static Window root;
 static cairo_surface_t *rgb_surface = NULL;
@@ -79,6 +86,7 @@ static void clear_surface (cairo_surface_t* surface) {
 }
 
 static void view_popup_menu(GtkWidget* widget, GdkEventButton* event, gpointer userdata) {
+    LOG_TID();
     GtkWidget *menu = gtk_menu_new();
     GtkWidget *menuitem = gtk_menu_item_new_with_label("Preferences...");
     GtkWidget *close_item = gtk_menu_item_new_with_label("Close");
@@ -295,6 +303,9 @@ void get_context_pixels(Display* d, int x, int y) {
 }
 
 static gboolean update_color(gpointer user_data) {
+
+    LOG_TID();
+    debug_print("test");
     if(!running)
         return G_SOURCE_REMOVE;
 
@@ -352,12 +363,14 @@ static gpointer update_thread_func (gpointer user_data) {
             g_mutex_unlock(&running_mutex);
             g_thread_exit(NULL);
         }
+        // do the read/write from this thread, then gui thread just swaps front/back buffers
         g_mutex_unlock(&running_mutex);
         source = g_idle_source_new();
         g_source_set_callback(source, update_color, NULL, NULL);
         g_source_attach(source, context);
         g_source_unref(source);
         g_usleep(50000);
+        LOG_TID();
     }
 
     return NULL;
