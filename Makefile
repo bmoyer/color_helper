@@ -1,5 +1,5 @@
 TARGET = color_helper 
-LIBS = -lm `pkg-config --cflags --libs gtk+-3.0 x11`
+LIBS = -lm `pkg-config --cflags --libs gtk+-3.0 x11 xext`
 CC = gcc
 CFLAGS = -g -Wall -O3
 

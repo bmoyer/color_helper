@@ -12,20 +12,24 @@
 #include "preferences_dialog.h"
 #include "preferences.h"
 #include "color_detect.h"
+#include "screengrab.h"
 #include "util.h"
 
 #define MAX_COLORS   1000
-#define CONTEXT_SIZE 30
+#define CONTEXT_SIZE 50
 #define CONTEXT_DISPLAY_SIZE 100
 
 #define DEBUG 0
-#define LOG_TID() debug_print("%s::%s\tTID = %ld\n", __FILE__, __func__, syscall(SYS_gettid));
 
 static Window root;
-static cairo_surface_t *rgb_surface = NULL;
-static cairo_surface_t *context_surface = NULL;
+static cairo_surface_t *rgb_surface;
+static cairo_surface_t *context_surface;
+
+int LAST_MOUSE_X = 0;
+int LAST_MOUSE_Y = 0;
 
 Display* d;
+Screen* screen;
 
 GtkWidget *main_window;
 GtkWidget* color_name_label;
@@ -36,11 +40,13 @@ GtkWidget *context_drawing_area;
 GMainContext *context;
 GThread* update_thread;
 preferences app_preferences;
+GThread* grab_thread;
 
 int running = 1;
 GMutex running_mutex;
 
 color CONTEXT_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
+color BACK_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
 color* colors;
 
 void refresh_preferences() {
@@ -64,8 +70,6 @@ static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpoint
 }
 
 static void on_preferences(GtkWidget* menu_item, gpointer userdata) {
-    // create prefs object from on-disk prefs
-    // object comes back to on_preferences_closed, and is then saved/swapped in
     show_preferences_dialog((GtkWindow*)main_window, &app_preferences, on_preferences_closed);
 }
 
@@ -203,6 +207,15 @@ static void draw_crosshair(cairo_t* rect) {
             cairo_fill(rect);
 }
 
+
+static void get_center_context_pixel(int* r, int* g, int* b) {
+    int center = CONTEXT_SIZE/2;
+    color center_pixel = CONTEXT_BUFFER[center][center];
+    *r = center_pixel.r;
+    *g = center_pixel.g;
+    *b = center_pixel.b;
+}
+
 static void draw_context_pixels() {
     cairo_t *cr;
     cr = cairo_create (context_surface);
@@ -275,7 +288,6 @@ void get_color(Display* d, int x, int y, int* r, int* g, int* b) {
 }
 
 void clip_coords_to_display_size(int* x, int* y) {
-    Screen* screen = ScreenOfDisplay(d, 0);
     if (*x < 0) {
         *x = 0;
     }
@@ -292,15 +304,33 @@ void clip_coords_to_display_size(int* x, int* y) {
 }
 
 void get_context_pixels(Display* d, int x, int y) {
-    for (int i = 0; i < CONTEXT_SIZE; i++) {
-        for(int j = 0; j < CONTEXT_SIZE; j++) {
-            int mouse_x = x - i + CONTEXT_SIZE/2;
-            int mouse_y = y - j + CONTEXT_SIZE/2;
-            clip_coords_to_display_size(&mouse_x, &mouse_y);
-            get_color(d, mouse_x, mouse_y, &CONTEXT_BUFFER[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].r, &CONTEXT_BUFFER[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].g, &CONTEXT_BUFFER[CONTEXT_SIZE-1-i][CONTEXT_SIZE-1-j].b);
-        }
+    x -= CONTEXT_SIZE/2;
+    y -= CONTEXT_SIZE/2;
+    clip_coords_to_display_size(&x, &y);
+    int w = CONTEXT_SIZE;
+    int h = CONTEXT_SIZE;
+    if(x+w >= screen->width) {
+        x = screen->width - CONTEXT_SIZE;
     }
-}
+    if(y+h >= screen->height) {
+        y = screen->height- CONTEXT_SIZE;
+    }
+    XImage* image = screengrab_xlib(d, x, y, w, h);
+     for (int i = 0; i < CONTEXT_SIZE; i++) {
+         for(int j = 0; j < CONTEXT_SIZE; j++) {
+            XColor c;
+            c.pixel = XGetPixel(image, i, j);
+            XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
+            BACK_BUFFER[i][j].r = (c.red/256);
+            BACK_BUFFER[i][j].b = (c.blue/256);
+            BACK_BUFFER[i][j].g = (c.green/256);
+         }
+     }
+    XDestroyImage(image);
+    memcpy(CONTEXT_BUFFER, BACK_BUFFER, sizeof(color) * CONTEXT_SIZE * CONTEXT_SIZE);
+ }
+
+
 
 static gboolean update_color(gpointer user_data) {
 
@@ -309,15 +339,13 @@ static gboolean update_color(gpointer user_data) {
     if(!running)
         return G_SOURCE_REMOVE;
 
-    int r, g, b, x, y;
-    query_pointer(&x, &y);
-    char s2[50] = "";
 
     // get color of pixel under cursor
-    get_color(d, x, y, &r, &g, &b);
+    int r, g, b;
+    char s2[50] = "";
+    get_center_context_pixel(&r, &g, &b);
 
     // get pixels around cursor
-    get_context_pixels(d, x, y);
     draw_context_pixels();
 
     // set RGB readout
@@ -354,6 +382,23 @@ static gboolean update_color(gpointer user_data) {
     return G_SOURCE_REMOVE;
 }
 
+static gpointer grab_thread_func (gpointer user_data) {
+    for (;;) {
+        g_mutex_lock(&running_mutex);
+        if(!running) {
+            g_mutex_unlock(&running_mutex);
+            g_thread_exit(NULL);
+        }
+        g_mutex_unlock(&running_mutex);
+        g_usleep(20000);
+
+        query_pointer(&LAST_MOUSE_X, &LAST_MOUSE_Y);
+        LOG_TIMING(get_context_pixels(d, LAST_MOUSE_X, LAST_MOUSE_Y));
+    }
+
+    return NULL;
+}
+
 static gpointer update_thread_func (gpointer user_data) {
     GSource *source;
 
@@ -369,7 +414,7 @@ static gpointer update_thread_func (gpointer user_data) {
         g_source_set_callback(source, update_color, NULL, NULL);
         g_source_attach(source, context);
         g_source_unref(source);
-        g_usleep(50000);
+        g_usleep(20000);
         LOG_TID();
     }
 
@@ -389,6 +434,7 @@ void setup_x11() {
         fprintf (stderr, "Couldn't connect to %s\n", XDisplayName (0));
         exit (EXIT_FAILURE);
     }
+    screen = ScreenOfDisplay(d, 0);
 
     attribs.override_redirect = True;
     w = XCreateWindow(d, DefaultRootWindow (d), 800, 800, 1, 1, 0,
@@ -473,6 +519,8 @@ static void activate (GtkApplication *app, gpointer user_data) {
 
     gtk_widget_show_all (main_window);
     refresh_preferences();
+    update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
+    grab_thread = g_thread_new(NULL, grab_thread_func, (gpointer)d);
 }
 
 void load_preferences() {
@@ -482,9 +530,9 @@ void load_preferences() {
 }
 
 int main (int argc, char **argv) {
+    XInitThreads();
     g_mutex_init(&running_mutex);
     load_preferences();
-    update_thread = g_thread_new(NULL, update_thread_func, (gpointer)d);
     colors = read_colors();
     GtkApplication *app;
     int status;
