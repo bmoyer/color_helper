@@ -9,12 +9,12 @@ typedef struct {
     int hsv_display;
     int name_display;
     int title_bar;
+    int draw_crosshair;
 
 } preferences;
 
 preferences* preferences_read();
 void preferences_write(preferences* preferences);
-void print(preferences* preferences);
-gchar* get_preferences_file_path();
+void preferences_print(preferences* preferences);
 
 #endif
