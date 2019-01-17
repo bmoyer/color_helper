@@ -189,22 +189,24 @@ static void draw_rect(int r, int g, int b) {
 }
 
 static void draw_crosshair(cairo_t* rect) {
-            cairo_set_source_rgb(rect, 1.0,1.0,1.0);
-            int SPACING = 10;
+    const int SPACING = 10;
 
-            // draw vertical dotted line
-            for(int i = 0; i < CONTEXT_DISPLAY_SIZE/SPACING; i++) {
-                int half = CONTEXT_DISPLAY_SIZE/2;
-                cairo_rectangle(rect, half, i*SPACING, 1, 5);
-            }
+    static const double dashed1[] = {5, SPACING};
+    static int len1  = sizeof(dashed1) / sizeof(dashed1[0]);
 
-            // draw horizontal dotted line
-            for(int i = 0; i < CONTEXT_DISPLAY_SIZE/SPACING; i++) {
-                int half = CONTEXT_DISPLAY_SIZE/2;
-                cairo_rectangle(rect, i*SPACING, half, 5, 1);
-            }
+    cairo_set_line_width(rect, 1.5);
+    cairo_set_dash(rect, dashed1, len1, 0);
+    cairo_set_source_rgb(rect, 1, 1, 1);
 
-            cairo_fill(rect);
+    // draw dotted horizontal line
+    cairo_move_to(rect, 0, 50);
+    cairo_line_to(rect, 100, 50);
+    cairo_stroke(rect);
+
+    // draw dotted vertical line
+    cairo_move_to(rect, 50, 0);
+    cairo_line_to(rect, 50, 100);
+    cairo_stroke(rect);
 }
 
 
@@ -414,7 +416,7 @@ static gpointer update_thread_func (gpointer user_data) {
         g_source_set_callback(source, update_color, NULL, NULL);
         g_source_attach(source, context);
         g_source_unref(source);
-        g_usleep(20000);
+        g_usleep(50000);
         LOG_TID();
     }
 
