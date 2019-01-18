@@ -226,9 +226,6 @@ static void draw_context_pixels() {
 
     for(int x = 0; x < CONTEXT_SIZE; x++) {
         for(int y = 0; y < CONTEXT_SIZE; y++) {
-            if(app_preferences.draw_crosshair) {
-                draw_crosshair(cr);
-            }
             cairo_set_source_rgb(cr,
                     CONTEXT_BUFFER[x][y].r/255.0, 
                     CONTEXT_BUFFER[x][y].g/255.0, 
@@ -236,6 +233,10 @@ static void draw_context_pixels() {
             cairo_rectangle(cr, x*PIXEL_SCALE, y*PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
             cairo_fill(cr);
         }
+    }
+
+    if(app_preferences.draw_crosshair) {
+        draw_crosshair(cr);
     }
 
     cairo_destroy (cr);
