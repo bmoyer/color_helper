@@ -45,8 +45,8 @@ GThread* grab_thread;
 int running = 1;
 GMutex running_mutex;
 
-color CONTEXT_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
-color BACK_BUFFER[CONTEXT_SIZE][CONTEXT_SIZE];
+color* CONTEXT_BUFFER;
+color* BACK_BUFFER;
 color* colors;
 
 void refresh_preferences() {
@@ -212,7 +212,7 @@ static void draw_crosshair(cairo_t* rect) {
 
 static void get_center_context_pixel(int* r, int* g, int* b) {
     int center = CONTEXT_SIZE/2;
-    color center_pixel = CONTEXT_BUFFER[center][center];
+    color center_pixel = CONTEXT_BUFFER[center*CONTEXT_SIZE + center];
     *r = center_pixel.r;
     *g = center_pixel.g;
     *b = center_pixel.b;
@@ -226,10 +226,10 @@ static void draw_context_pixels() {
 
     for(int x = 0; x < CONTEXT_SIZE; x++) {
         for(int y = 0; y < CONTEXT_SIZE; y++) {
-            cairo_set_source_rgb(cr,
-                    CONTEXT_BUFFER[x][y].r/255.0, 
-                    CONTEXT_BUFFER[x][y].g/255.0, 
-                    CONTEXT_BUFFER[x][y].b/255.0);
+            cairo_set_source_rgb(cr, //row-major layout
+                    CONTEXT_BUFFER[CONTEXT_SIZE*x + y].r/255.0,
+                    CONTEXT_BUFFER[CONTEXT_SIZE*x + y].g/255.0,
+                    CONTEXT_BUFFER[CONTEXT_SIZE*x + y].b/255.0);
             cairo_rectangle(cr, x*PIXEL_SCALE, y*PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
             cairo_fill(cr);
         }
@@ -324,9 +324,9 @@ void get_context_pixels(Display* d, int x, int y) {
             XColor c;
             c.pixel = XGetPixel(image, i, j);
             XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
-            BACK_BUFFER[i][j].r = (c.red/256);
-            BACK_BUFFER[i][j].b = (c.blue/256);
-            BACK_BUFFER[i][j].g = (c.green/256);
+            BACK_BUFFER[i*CONTEXT_SIZE + j].r = (c.red/256);
+            BACK_BUFFER[i*CONTEXT_SIZE + j].b = (c.blue/256);
+            BACK_BUFFER[i*CONTEXT_SIZE + j].g = (c.green/256);
          }
      }
     XDestroyImage(image);
@@ -533,6 +533,8 @@ void load_preferences() {
 }
 
 int main (int argc, char **argv) {
+    CONTEXT_BUFFER = malloc(sizeof(color) * CONTEXT_SIZE * CONTEXT_SIZE);
+    BACK_BUFFER = malloc(sizeof(color) * CONTEXT_SIZE * CONTEXT_SIZE);
     XInitThreads();
     g_mutex_init(&running_mutex);
     load_preferences();
@@ -546,6 +548,8 @@ int main (int argc, char **argv) {
     g_thread_join(update_thread);
     g_object_unref (app);
     free(colors);
+    free(CONTEXT_BUFFER);
+    free(BACK_BUFFER);
 
     return status;
 }
