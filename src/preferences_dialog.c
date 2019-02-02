@@ -9,10 +9,19 @@ GtkWidget* hsv_check;
 GtkWidget* name_check;
 GtkWidget* title_bar_check;
 GtkWidget* draw_crosshair_check;
+GtkWidget* zoom_level_combo;
 
-void on_option_toggled(GtkToggleButton* widget, gpointer userdata) {
+static const int ZOOM_LEVELS[] = { 25, 50, 100 };
+
+void on_toggle_option_changed(GtkToggleButton* widget, gpointer userdata) {
     int* option = userdata;
     *option = gtk_toggle_button_get_active(widget) ? 1 : 0;
+}
+
+void on_zoom_combo_changed(GtkComboBoxText* widget, gpointer userdata) {
+    gchar* selected = gtk_combo_box_text_get_active_text(widget);
+    preferences* p = (preferences*) userdata;
+    p->zoom_level = atoi(selected);
 }
 
 void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* on_preferences_closed_func)(GtkWidget*, GdkEvent*, gpointer)) {
@@ -57,12 +66,23 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     draw_crosshair_check = gtk_check_button_new_with_label("Draw crosshair");
     gtk_box_pack_start(GTK_BOX(vbox), draw_crosshair_check, 0, 0, 0);
 
-    g_signal_connect(G_OBJECT(rgb_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->rgb_display));
-    g_signal_connect(G_OBJECT(hex_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->hex_display));
-    g_signal_connect(G_OBJECT(hsv_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->hsv_display));
-    g_signal_connect(G_OBJECT(name_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->name_display));
-    g_signal_connect(G_OBJECT(title_bar_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->title_bar));
-    g_signal_connect(G_OBJECT(draw_crosshair_check), "toggled", G_CALLBACK(on_option_toggled), &(prefs->draw_crosshair));
+    zoom_level_combo = gtk_combo_box_text_new();
+    int NUM_ZOOM_LEVELS = sizeof(ZOOM_LEVELS)/sizeof(ZOOM_LEVELS[0]);
+    for(int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+        char str[5];
+        sprintf(str, "%d", ZOOM_LEVELS[i]);
+        gtk_combo_box_text_append((GtkComboBoxText*)zoom_level_combo, NULL, str);
+    }
+    gtk_box_pack_start(GTK_BOX(vbox), zoom_level_combo, 0, 0, 0);
+
+    g_signal_connect(G_OBJECT(rgb_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->rgb_display));
+    g_signal_connect(G_OBJECT(hex_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->hex_display));
+    g_signal_connect(G_OBJECT(hsv_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->hsv_display));
+    g_signal_connect(G_OBJECT(name_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->name_display));
+    g_signal_connect(G_OBJECT(title_bar_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->title_bar));
+    g_signal_connect(G_OBJECT(draw_crosshair_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->draw_crosshair));
+
+    g_signal_connect(G_OBJECT(zoom_level_combo), "changed", G_CALLBACK(on_zoom_combo_changed), prefs);
 }
 
 void display_preferences(preferences* prefs) {
@@ -72,5 +92,12 @@ void display_preferences(preferences* prefs) {
     gtk_toggle_button_set_active((GtkToggleButton*)name_check, prefs->name_display);
     gtk_toggle_button_set_active((GtkToggleButton*)title_bar_check, prefs->title_bar);
     gtk_toggle_button_set_active((GtkToggleButton*)draw_crosshair_check, prefs->draw_crosshair);
+
+    const int NUM_ZOOM_LEVELS = sizeof(ZOOM_LEVELS)/sizeof(ZOOM_LEVELS[0]);
+    for(int i = 0; i < NUM_ZOOM_LEVELS; i++) {
+        if(prefs->zoom_level == ZOOM_LEVELS[i]) {
+            gtk_combo_box_set_active((GtkComboBox*)zoom_level_combo, i);
+        }
+    }
 }
 

@@ -5,7 +5,7 @@ Simple Linux tool which identifies the color of the pixel the user is hovering o
 ![screenshot](res/screenshot.png "Screenshot")
 
 Dependencies:
-* GTK3.0
+* GTK3.22+
 * X11
 
 To run:

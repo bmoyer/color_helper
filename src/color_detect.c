@@ -39,8 +39,8 @@ void yuv_from_rgb(int* y, int* u, int* v, int r, int g, int b) {
     *v =  0.439 * r - 0.368 * g - 0.071 * b + 128;
 }
 
-color* read_colors() {
-    color* ret = malloc(sizeof(color) * NUM_COLORS);
+color* read_colors(int max_colors) {
+    color* ret = malloc(sizeof(color) * max_colors);
     int i = 0;
     color c;
 

@@ -10,11 +10,10 @@ XImage* screengrab_xlib(Display* d, int x, int y, int w, int h) {
 
 
 XImage* screengrab_xshm(Display* d, int x, int y, int w, int h) {
-  int s;
   XImage *image;
   XShmSegmentInfo shminfo;
   d = XOpenDisplay(NULL);
-  s = DefaultScreen(d);
+  DefaultScreen(d);
 
   image = XShmCreateImage(d, 
       DefaultVisual(d,0),

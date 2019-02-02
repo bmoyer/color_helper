@@ -10,6 +10,7 @@ typedef struct {
     int name_display;
     int title_bar;
     int draw_crosshair;
+    int zoom_level;
 
 } preferences;
 

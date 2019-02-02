@@ -1,8 +1,6 @@
 #ifndef COLOR_DETECT_H_INCLUDED
 #define COLOR_DETECT_H_INCLUDED
 
-#define NUM_COLORS 1000
-
 typedef struct {
     // RGB color space
     int r;

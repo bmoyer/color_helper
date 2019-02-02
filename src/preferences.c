@@ -14,6 +14,15 @@ int get_integer_value(GKeyFile* file, const gchar* group_name, const gchar* key,
     return val;
 }
 
+char* get_string_value(GKeyFile* file, const gchar* group_name, const gchar* key, char* default_val) {
+    GError* error = NULL;
+    char* val = g_key_file_get_string(file, group_name, key, &error);
+    if(error) {
+        val = default_val;
+    }
+    return val;
+}
+
 preferences* preferences_read() {
     GKeyFile* file = g_key_file_new();
     preferences* prefs = malloc(sizeof(preferences));
@@ -24,6 +33,7 @@ preferences* preferences_read() {
     prefs->hsv_display = get_integer_value(file, "View", "hsv_display", 0);
     prefs->name_display = get_integer_value(file, "View", "name_display", 1);
     prefs->title_bar = get_integer_value(file, "View", "title_bar", 1);
+    prefs->zoom_level = get_integer_value(file, "View", "zoom_level", 25);
     prefs->draw_crosshair = get_integer_value(file, "View", "draw_crosshair", 1);
 
     g_key_file_free(file);
@@ -69,6 +79,11 @@ void preferences_write(preferences* prefs) {
                         "View",
                         "title_bar",
                         prefs->title_bar);
+
+    g_key_file_set_integer (file,
+                        "View",
+                        "zoom_level",
+                        prefs->zoom_level);
 
     g_key_file_set_integer (file,
                         "View",

@@ -1,7 +1,7 @@
 TARGET = color_helper 
 LIBS = -lm `pkg-config --cflags --libs gtk+-3.0 x11 xext`
 CC = gcc
-CFLAGS = -g -Wall -O3
+CFLAGS = -Wall -O3
 
 .PHONY: default all clean
 

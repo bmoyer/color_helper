@@ -15,11 +15,12 @@
 #include "screengrab.h"
 #include "util.h"
 
-#define MAX_COLORS   1000
-#define CONTEXT_SIZE 50
-#define CONTEXT_DISPLAY_SIZE 100
-
 #define DEBUG 0
+#define MAX_CONTEXT_SIZE 100
+#define MAX_COLORS 1000
+
+int cur_context_display_size = 100;
+int cur_context_size = 100;
 
 static Window root;
 static cairo_surface_t *rgb_surface;
@@ -30,24 +31,25 @@ int LAST_MOUSE_Y = 0;
 
 Display* d;
 Screen* screen;
+GMainContext* context;
 
-GtkWidget *main_window;
+GtkWidget* main_window;
 GtkWidget* color_name_label;
 GtkWidget* rgb_label;
 GtkWidget* hex_label;
-GtkWidget *color_drawing_area;
-GtkWidget *context_drawing_area;
-GMainContext *context;
-GThread* update_thread;
+GtkWidget* color_drawing_area;
+GtkWidget* context_drawing_area;
 preferences app_preferences;
+
+GThread* update_thread;
 GThread* grab_thread;
 
 int running = 1;
 GMutex running_mutex;
 
-color* CONTEXT_BUFFER;
-color* BACK_BUFFER;
-color* colors;
+color* front_context_buffer;
+color* back_context_buffer;
+color* color_list;
 
 void refresh_preferences() {
     app_preferences.rgb_display ? gtk_widget_show(rgb_label) :
@@ -60,6 +62,10 @@ void refresh_preferences() {
                                   gtk_widget_hide(color_name_label);
 
     gtk_window_set_decorated((GtkWindow*)main_window, app_preferences.title_bar);
+
+    if(cur_context_size != app_preferences.zoom_level) {
+        cur_context_size = app_preferences.zoom_level;
+    }
 }
 
 static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpointer user_data) {
@@ -179,13 +185,13 @@ static void draw_rect(int r, int g, int b) {
     cr = cairo_create (rgb_surface);
     cairo_set_source_rgb(cr, r/255.0, g/255.0, b/255.0);
 
-    cairo_rectangle (cr, 0, 0, CONTEXT_DISPLAY_SIZE, CONTEXT_DISPLAY_SIZE);
+    cairo_rectangle (cr, 0, 0, cur_context_display_size, cur_context_display_size);
     cairo_fill (cr);
 
     cairo_destroy (cr);
 
     /* Now invalidate the affected region of the drawing area. */
-    gtk_widget_queue_draw_area (color_drawing_area, 0, 0, CONTEXT_DISPLAY_SIZE, CONTEXT_DISPLAY_SIZE);
+    gtk_widget_queue_draw_area (color_drawing_area, 0, 0, cur_context_display_size, cur_context_display_size);
 }
 
 static void draw_crosshair(cairo_t* rect) {
@@ -211,8 +217,8 @@ static void draw_crosshair(cairo_t* rect) {
 
 
 static void get_center_context_pixel(int* r, int* g, int* b) {
-    int center = CONTEXT_SIZE/2;
-    color center_pixel = CONTEXT_BUFFER[center*CONTEXT_SIZE + center];
+    int center = cur_context_size/2;
+    color center_pixel = front_context_buffer[center*cur_context_size + center];
     *r = center_pixel.r;
     *g = center_pixel.g;
     *b = center_pixel.b;
@@ -222,14 +228,14 @@ static void draw_context_pixels() {
     cairo_t *cr;
     cr = cairo_create (context_surface);
 
-    int PIXEL_SCALE = CONTEXT_DISPLAY_SIZE/CONTEXT_SIZE;
+    int PIXEL_SCALE = cur_context_display_size/cur_context_size;
 
-    for(int x = 0; x < CONTEXT_SIZE; x++) {
-        for(int y = 0; y < CONTEXT_SIZE; y++) {
+    for(int x = 0; x < cur_context_size; x++) {
+        for(int y = 0; y < cur_context_size; y++) {
             cairo_set_source_rgb(cr, //row-major layout
-                    CONTEXT_BUFFER[CONTEXT_SIZE*x + y].r/255.0,
-                    CONTEXT_BUFFER[CONTEXT_SIZE*x + y].g/255.0,
-                    CONTEXT_BUFFER[CONTEXT_SIZE*x + y].b/255.0);
+                    front_context_buffer[cur_context_size*x + y].r/255.0,
+                    front_context_buffer[cur_context_size*x + y].g/255.0,
+                    front_context_buffer[cur_context_size*x + y].b/255.0);
             cairo_rectangle(cr, x*PIXEL_SCALE, y*PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
             cairo_fill(cr);
         }
@@ -240,7 +246,7 @@ static void draw_context_pixels() {
     }
 
     cairo_destroy (cr);
-    gtk_widget_queue_draw_area (context_drawing_area, 0, 0, CONTEXT_DISPLAY_SIZE, CONTEXT_DISPLAY_SIZE);
+    gtk_widget_queue_draw_area (context_drawing_area, 0, 0, cur_context_display_size, cur_context_display_size);
 }
 
 static gboolean delete_event(GtkWidget* w, GdkEvent* e, gpointer d) {
@@ -307,30 +313,30 @@ void clip_coords_to_display_size(int* x, int* y) {
 }
 
 void get_context_pixels(Display* d, int x, int y) {
-    x -= CONTEXT_SIZE/2;
-    y -= CONTEXT_SIZE/2;
+    x -= cur_context_size/2;
+    y -= cur_context_size/2;
     clip_coords_to_display_size(&x, &y);
-    int w = CONTEXT_SIZE;
-    int h = CONTEXT_SIZE;
+    int w = cur_context_size;
+    int h = cur_context_size;
     if(x+w >= screen->width) {
-        x = screen->width - CONTEXT_SIZE;
+        x = screen->width - cur_context_size;
     }
     if(y+h >= screen->height) {
-        y = screen->height- CONTEXT_SIZE;
+        y = screen->height- cur_context_size;
     }
     XImage* image = screengrab_xlib(d, x, y, w, h);
-     for (int i = 0; i < CONTEXT_SIZE; i++) {
-         for(int j = 0; j < CONTEXT_SIZE; j++) {
+     for (int i = 0; i < cur_context_size; i++) {
+         for(int j = 0; j < cur_context_size; j++) {
             XColor c;
             c.pixel = XGetPixel(image, i, j);
             XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
-            BACK_BUFFER[i*CONTEXT_SIZE + j].r = (c.red/256);
-            BACK_BUFFER[i*CONTEXT_SIZE + j].b = (c.blue/256);
-            BACK_BUFFER[i*CONTEXT_SIZE + j].g = (c.green/256);
+            back_context_buffer[i*cur_context_size + j].r = (c.red/256);
+            back_context_buffer[i*cur_context_size + j].b = (c.blue/256);
+            back_context_buffer[i*cur_context_size + j].g = (c.green/256);
          }
      }
     XDestroyImage(image);
-    memcpy(CONTEXT_BUFFER, BACK_BUFFER, sizeof(color) * CONTEXT_SIZE * CONTEXT_SIZE);
+    memcpy(front_context_buffer, back_context_buffer, sizeof(color) * cur_context_size * cur_context_size);
  }
 
 
@@ -361,7 +367,7 @@ static gboolean update_color(gpointer user_data) {
 
     gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
     // set name readout
-    color c = nearest_color(r, g, b, colors, MAX_COLORS);
+    color c = nearest_color(r, g, b, color_list, MAX_COLORS);
 
     char nameLbl[60];
     sprintf(nameLbl, c.name);
@@ -533,12 +539,12 @@ void load_preferences() {
 }
 
 int main (int argc, char **argv) {
-    CONTEXT_BUFFER = malloc(sizeof(color) * CONTEXT_SIZE * CONTEXT_SIZE);
-    BACK_BUFFER = malloc(sizeof(color) * CONTEXT_SIZE * CONTEXT_SIZE);
+    front_context_buffer = malloc(sizeof(color) * MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE);
+    back_context_buffer = malloc(sizeof(color) * MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE);
     XInitThreads();
     g_mutex_init(&running_mutex);
     load_preferences();
-    colors = read_colors();
+    color_list = read_colors(MAX_COLORS);
     GtkApplication *app;
     int status;
 
@@ -546,10 +552,12 @@ int main (int argc, char **argv) {
     g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
     status = g_application_run (G_APPLICATION (app), argc, argv);
     g_thread_join(update_thread);
+    g_thread_join(grab_thread);
     g_object_unref (app);
-    free(colors);
-    free(CONTEXT_BUFFER);
-    free(BACK_BUFFER);
+
+    free(color_list);
+    free(front_context_buffer);
+    free(back_context_buffer);
 
     return status;
 }
