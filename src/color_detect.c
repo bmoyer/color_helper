@@ -39,12 +39,18 @@ void yuv_from_rgb(int* y, int* u, int* v, int r, int g, int b) {
     *v =  0.439 * r - 0.368 * g - 0.071 * b + 128;
 }
 
-color* read_colors(int max_colors) {
-    color* ret = malloc(sizeof(color) * max_colors);
+int read_colors(color* color_list, char* filepath, int max_colors) {
     int i = 0;
     color c;
 
-    FILE* file = fopen("res/map.txt", "r");
+    FILE* file;
+    if((file = fopen(filepath, "r")) == NULL) {
+        sprintf(c.name, "Unknown");
+        c.r = c.g = c.b = 0;
+        color_list[0] = c;
+        return 0;
+    }
+
     char line[60];
     while (fgets(line, 60, file)) {
         // read color name
@@ -65,11 +71,11 @@ color* read_colors(int max_colors) {
 
         yuv_from_rgb(&c.y, &c.u, &c.v, c.r, c.g, c.b);
 
-        ret[i] = c;
+        color_list[i] = c;
         i++;
     }
     fclose(file);
 
-    return ret;
+    return 1;
 }
 

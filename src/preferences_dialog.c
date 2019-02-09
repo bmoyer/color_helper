@@ -11,7 +11,7 @@ GtkWidget* title_bar_check;
 GtkWidget* draw_crosshair_check;
 GtkWidget* zoom_level_combo;
 
-static const int ZOOM_LEVELS[] = { 25, 50, 100 };
+static const int ZOOM_LEVELS[] = { 10, 25, 50, 100 };
 
 void on_toggle_option_changed(GtkToggleButton* widget, gpointer userdata) {
     int* option = userdata;

@@ -538,26 +538,38 @@ void load_preferences() {
     free(prefs);
 }
 
+void load_color_list() {
+    char* COLOR_MAP_FILE = "res/map.txt";
+    color_list = malloc(sizeof(color) * MAX_COLORS);
+    if(!read_colors(color_list, COLOR_MAP_FILE, MAX_COLORS)) {
+        printf("Failed to open color file %s, color naming is disabled.\n",
+            COLOR_MAP_FILE);
+    }
+}
+
 int main (int argc, char **argv) {
-    front_context_buffer = malloc(sizeof(color) * MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE);
-    back_context_buffer = malloc(sizeof(color) * MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE);
+    load_preferences();
+    load_color_list();
+    front_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
+    back_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
+
     XInitThreads();
     g_mutex_init(&running_mutex);
-    load_preferences();
-    color_list = read_colors(MAX_COLORS);
-    GtkApplication *app;
-    int status;
 
-    app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
+    GtkApplication* app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
     g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
-    status = g_application_run (G_APPLICATION (app), argc, argv);
+    int status = g_application_run (G_APPLICATION (app), argc, argv);
+
+    // wait on both threads before deleting buffers
     g_thread_join(update_thread);
     g_thread_join(grab_thread);
-    g_object_unref (app);
 
+    // free all resources
+    g_object_unref (app);
     free(color_list);
     free(front_context_buffer);
     free(back_context_buffer);
+    XCloseDisplay(d);
 
     return status;
 }

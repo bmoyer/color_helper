@@ -17,7 +17,7 @@ typedef struct {
 
 void yuv_from_rgb(int* y, int* u, int* v, int r, int g, int b);
 color nearest_color(int r, int g, int b, color* colors, int ncolors);
-color* read_colors();
+int read_colors(color* color_list, char* filepath, int max_colors);
 
 #endif /*COLOR_DETECT_H_INCLUDED*/
 
