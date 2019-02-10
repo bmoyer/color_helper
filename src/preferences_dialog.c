@@ -2,7 +2,6 @@
 
 #include "preferences_dialog.h"
 
-GtkWidget* viewTabLabel;
 GtkWidget* rgb_check;
 GtkWidget* hex_check;
 GtkWidget* hsv_check;
@@ -24,12 +23,41 @@ void on_zoom_combo_changed(GtkComboBoxText* widget, gpointer userdata) {
     p->zoom_level = atoi(selected);
 }
 
+void on_color_file_browse_button_pressed(GtkButton* button, gpointer user_data) {
+    GtkWidget *dialog;
+    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
+    gint res;
+
+    dialog = gtk_file_chooser_dialog_new ("Open File",
+					  NULL,
+					  action,
+					  "_Cancel",
+					  GTK_RESPONSE_CANCEL,
+					  "_Open",
+					  GTK_RESPONSE_ACCEPT,
+					  NULL);
+
+    res = gtk_dialog_run (GTK_DIALOG (dialog));
+    if (res == GTK_RESPONSE_ACCEPT)
+      {
+	char *filename;
+	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
+	filename = gtk_file_chooser_get_filename (chooser);
+        printf("User selected %s\n", filename);
+	//open_file (filename);
+	g_free (filename);
+      }
+
+    gtk_widget_destroy (dialog);
+}
+
 void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* on_preferences_closed_func)(GtkWidget*, GdkEvent*, gpointer)) {
     GtkWidget* dialog = gtk_dialog_new();
     GtkWidget* content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
 
     GtkWidget* notebook = gtk_notebook_new();
     add_view_tab(notebook, prefs);
+    add_color_tab(notebook, prefs);
     gtk_container_add(GTK_CONTAINER(content_area), notebook);
 
     gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
@@ -42,11 +70,33 @@ void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* o
     gtk_widget_show_all(dialog);
 }
 
+void add_color_tab(GtkWidget* notebook, preferences* prefs) {
+    GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+
+    // create folor file hbox
+    GtkWidget* color_file_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget* color_file_label = gtk_label_new("Color file:");
+    gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_label, 0, 0, 0);
+    GtkWidget* color_file_display_label = gtk_label_new("file.txt");
+    gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_display_label, 0, 0, 0);
+    GtkWidget* color_file_browse_button = gtk_button_new_with_label("Browse...");
+    gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_browse_button, 0, 0, 0);
+    g_signal_connect(G_OBJECT(color_file_browse_button), "pressed", G_CALLBACK(on_color_file_browse_button_pressed), prefs);
+
+    // create some other hbox...
+    
+    // add hbox(s) to vbox
+    gtk_box_pack_start(GTK_BOX(vbox), color_file_hbox, 0, 0, 0);
+
+    GtkWidget* color_tab_label = gtk_label_new("Color");
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, color_tab_label);
+}
+
 void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
 
-    viewTabLabel = gtk_label_new("View");
-    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, viewTabLabel);
+    GtkWidget* view_tab_label = gtk_label_new("View");
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, view_tab_label);
 
     rgb_check = gtk_check_button_new_with_label("RGB display");
     gtk_box_pack_start(GTK_BOX(vbox), rgb_check, 0, 0, 0);
