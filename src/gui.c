@@ -45,7 +45,12 @@ preferences app_preferences;
 GThread* update_thread;
 GThread* grab_thread;
 
+GMutex context_mutex;
+GCond grab_cond;
+GCond draw_cond;
+
 int running = 1;
+int need_context = 1;
 GMutex running_mutex;
 
 color* front_context_buffer;
@@ -347,7 +352,6 @@ void get_context_pixels(Display* d, int x, int y) {
 static gboolean update_color(gpointer user_data) {
 
     LOG_TID();
-    debug_print("test");
     if(!running)
         return G_SOURCE_REMOVE;
 
@@ -358,7 +362,7 @@ static gboolean update_color(gpointer user_data) {
     get_center_context_pixel(&r, &g, &b);
 
     // get pixels around cursor
-    draw_context_pixels();
+    LOG_TIMING(draw_context_pixels(), "DRAWCONTEXT");
 
     // set RGB readout
     sprintf(s2, "RGB: (%03d, %03d, %03d)", r, g, b);
@@ -402,10 +406,15 @@ static gpointer grab_thread_func (gpointer user_data) {
             g_thread_exit(NULL);
         }
         g_mutex_unlock(&running_mutex);
-        g_usleep(20000);
-
         query_pointer(&LAST_MOUSE_X, &LAST_MOUSE_Y);
-        LOG_TIMING(get_context_pixels(d, LAST_MOUSE_X, LAST_MOUSE_Y));
+        g_mutex_lock(&context_mutex);
+        while(!need_context) {
+            g_cond_wait(&grab_cond, &context_mutex);
+        }
+        LOG_TIMING(get_context_pixels(d, LAST_MOUSE_X, LAST_MOUSE_Y), "GETCONTEXT");
+        need_context = 0;
+        g_cond_signal(&draw_cond);
+        g_mutex_unlock(&context_mutex);
     }
 
     return NULL;
@@ -423,11 +432,17 @@ static gpointer update_thread_func (gpointer user_data) {
         // do the read/write from this thread, then gui thread just swaps front/back buffers
         g_mutex_unlock(&running_mutex);
         source = g_idle_source_new();
+
+        g_mutex_lock(&context_mutex);
+        while(need_context) {
+            g_cond_wait(&draw_cond, &context_mutex);
+        }
         g_source_set_callback(source, update_color, NULL, NULL);
         g_source_attach(source, context);
         g_source_unref(source);
-        g_usleep(50000);
-        LOG_TID();
+        need_context = 1;
+        g_cond_signal(&grab_cond);
+        g_mutex_unlock(&context_mutex);
     }
 
     return NULL;
