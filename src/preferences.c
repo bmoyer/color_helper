@@ -18,15 +18,19 @@ char* get_string_value(GKeyFile* file, const gchar* group_name, const gchar* key
     GError* error = NULL;
     char* val = g_key_file_get_string(file, group_name, key, &error);
     if(error) {
-        val = default_val;
+        val = strdup(default_val);
     }
+
     return val;
 }
 
 preferences* preferences_read() {
     GKeyFile* file = g_key_file_new();
     preferences* prefs = malloc(sizeof(preferences));
-    g_key_file_load_from_file(file, get_preferences_file_path(), G_KEY_FILE_NONE, NULL);
+
+    gchar* preferences_filepath = get_preferences_file_path();
+    g_key_file_load_from_file(file, preferences_filepath, G_KEY_FILE_NONE, NULL);
+    g_free(preferences_filepath);
 
     prefs->rgb_display = get_integer_value(file, "View", "rgb_display", 1);
     prefs->hex_display = get_integer_value(file, "View", "hex_display", 0);
@@ -36,7 +40,9 @@ preferences* preferences_read() {
     prefs->zoom_level = get_integer_value(file, "View", "zoom_level", 25);
     prefs->draw_crosshair = get_integer_value(file, "View", "draw_crosshair", 1);
 
-    g_key_file_free(file);
+    char* color_map_file = get_string_value(file, "Color", "color_map_file", "res/map.txt");
+    prefs->color_map_file = strdup(color_map_file);
+    free(color_map_file);
 
     return prefs;
 }
@@ -90,7 +96,14 @@ void preferences_write(preferences* prefs) {
                         "draw_crosshair",
                         prefs->draw_crosshair);
 
-    g_key_file_save_to_file(file, get_preferences_file_path(), NULL);
+    g_key_file_set_string (file,
+                        "Color",
+                        "color_map_file",
+                        prefs->color_map_file);
+
+    gchar* preferences_filepath = get_preferences_file_path();
+    g_key_file_save_to_file(file, preferences_filepath, NULL);
+    g_free(preferences_filepath);
     g_key_file_free(file);
 }
 

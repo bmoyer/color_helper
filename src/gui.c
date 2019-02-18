@@ -14,6 +14,7 @@
 #include "color_detect.h"
 #include "screengrab.h"
 #include "util.h"
+#include "gui.h"
 
 #define DEBUG 0
 #define MAX_CONTEXT_SIZE 100
@@ -66,6 +67,8 @@ void refresh_preferences() {
     if(cur_context_size != app_preferences.zoom_level) {
         cur_context_size = app_preferences.zoom_level;
     }
+
+    load_color_list();
 }
 
 static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpointer user_data) {
@@ -539,17 +542,19 @@ void load_preferences() {
 }
 
 void load_color_list() {
-    char* COLOR_MAP_FILE = "res/map.txt";
-    color_list = malloc(sizeof(color) * MAX_COLORS);
-    if(!read_colors(color_list, COLOR_MAP_FILE, MAX_COLORS)) {
+    if(color_list) {
+        free(color_list);
+    }
+
+    color_list = calloc(MAX_COLORS, sizeof(color));
+    if(!read_colors(color_list, app_preferences.color_map_file, MAX_COLORS)) {
         printf("Failed to open color file %s, color naming is disabled.\n",
-            COLOR_MAP_FILE);
+            app_preferences.color_map_file);
     }
 }
 
 int main (int argc, char **argv) {
     load_preferences();
-    load_color_list();
     front_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
     back_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
 
@@ -569,6 +574,7 @@ int main (int argc, char **argv) {
     free(color_list);
     free(front_context_buffer);
     free(back_context_buffer);
+    free(app_preferences.color_map_file);
     XCloseDisplay(d);
 
     return status;

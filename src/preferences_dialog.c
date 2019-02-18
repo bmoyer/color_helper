@@ -9,6 +9,7 @@ GtkWidget* name_check;
 GtkWidget* title_bar_check;
 GtkWidget* draw_crosshair_check;
 GtkWidget* zoom_level_combo;
+GtkWidget* color_file_display_label;
 
 static const int ZOOM_LEVELS[] = { 10, 25, 50, 100 };
 
@@ -21,6 +22,7 @@ void on_zoom_combo_changed(GtkComboBoxText* widget, gpointer userdata) {
     gchar* selected = gtk_combo_box_text_get_active_text(widget);
     preferences* p = (preferences*) userdata;
     p->zoom_level = atoi(selected);
+    g_free(selected);
 }
 
 void on_color_file_browse_button_pressed(GtkButton* button, gpointer user_data) {
@@ -43,8 +45,13 @@ void on_color_file_browse_button_pressed(GtkButton* button, gpointer user_data) 
 	char *filename;
 	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
 	filename = gtk_file_chooser_get_filename (chooser);
-        printf("User selected %s\n", filename);
-	//open_file (filename);
+        gtk_label_set_text((GtkLabel*)color_file_display_label, filename);
+        preferences* p = (preferences*)user_data;
+        if(p->color_map_file) {
+            free(p->color_map_file);
+        }
+        p->color_map_file = malloc((strlen(filename)+1) * sizeof(char));
+        strcpy(p->color_map_file, filename);
 	g_free (filename);
       }
 
@@ -77,7 +84,7 @@ void add_color_tab(GtkWidget* notebook, preferences* prefs) {
     GtkWidget* color_file_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     GtkWidget* color_file_label = gtk_label_new("Color file:");
     gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_label, 0, 0, 0);
-    GtkWidget* color_file_display_label = gtk_label_new("file.txt");
+    color_file_display_label = gtk_label_new("file.txt");
     gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_display_label, 0, 0, 0);
     GtkWidget* color_file_browse_button = gtk_button_new_with_label("Browse...");
     gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_browse_button, 0, 0, 0);
@@ -149,5 +156,6 @@ void display_preferences(preferences* prefs) {
             gtk_combo_box_set_active((GtkComboBox*)zoom_level_combo, i);
         }
     }
+    gtk_label_set_text((GtkLabel*)color_file_display_label, prefs->color_map_file);
 }
 
