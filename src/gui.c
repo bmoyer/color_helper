@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "preferences_dialog.h"
 #include "preferences.h"
@@ -19,6 +20,8 @@
 #define DEBUG 0
 #define MAX_CONTEXT_SIZE 100
 #define MAX_COLORS 1000
+#define FRAMES_PER_SECOND 60
+const int USEC_PER_FRAME = pow(FRAMES_PER_SECOND, -1) * 1000000;
 
 int cur_context_display_size = 100;
 int cur_context_size = 100;
@@ -56,6 +59,8 @@ GMutex running_mutex;
 color* front_context_buffer;
 color* back_context_buffer;
 color* color_list;
+
+struct timeval last_update;
 
 void refresh_preferences() {
     app_preferences.rgb_display ? gtk_widget_show(rgb_label) :
@@ -335,16 +340,23 @@ void get_context_pixels(Display* d, int x, int y) {
     XImage* image = screengrab_xlib(d, x, y, w, h);
      for (int i = 0; i < cur_context_size; i++) {
          for(int j = 0; j < cur_context_size; j++) {
-            XColor c;
-            c.pixel = XGetPixel(image, i, j);
-            XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
-            back_context_buffer[i*cur_context_size + j].r = (c.red/256);
-            back_context_buffer[i*cur_context_size + j].b = (c.blue/256);
-            back_context_buffer[i*cur_context_size + j].g = (c.green/256);
+            unsigned long c = XGetPixel(image, i, j);
+            back_context_buffer[i*cur_context_size + j].r = (c & image->red_mask) >> 16;
+            back_context_buffer[i*cur_context_size + j].g = (c & image->green_mask) >> 8;
+            back_context_buffer[i*cur_context_size + j].b = (c & image->blue_mask);
          }
      }
     XDestroyImage(image);
+
+    struct timeval cur_time = get_time();
+    long elapsed = get_usec_elapsed(&cur_time, &last_update);
+    long remainder = USEC_PER_FRAME - elapsed;
+    if(remainder > 0) {
+        // sleep for remainder of the time slice
+        usleep(remainder);
+    }
     memcpy(front_context_buffer, back_context_buffer, sizeof(color) * cur_context_size * cur_context_size);
+    last_update = get_time();
  }
 
 
@@ -572,6 +584,7 @@ int main (int argc, char **argv) {
     load_preferences();
     front_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
     back_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
+    last_update = get_time();
 
     XInitThreads();
     g_mutex_init(&running_mutex);
