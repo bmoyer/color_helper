@@ -10,12 +10,18 @@ GtkWidget* title_bar_check;
 GtkWidget* draw_crosshair_check;
 GtkWidget* zoom_level_combo;
 GtkWidget* color_file_display_label;
+GtkWidget* fps_spin_button;
 
 static const int ZOOM_LEVELS[] = { 10, 25, 50, 100 };
 
 void on_toggle_option_changed(GtkToggleButton* widget, gpointer userdata) {
     int* option = userdata;
     *option = gtk_toggle_button_get_active(widget) ? 1 : 0;
+}
+
+void on_fps_changed(GtkToggleButton* widget, gpointer userdata) {
+    preferences* prefs = (preferences*)userdata;
+    prefs->frames_per_second = gtk_spin_button_get_value_as_int((GtkSpinButton*)fps_spin_button);
 }
 
 void on_zoom_combo_changed(GtkComboBoxText* widget, gpointer userdata) {
@@ -65,6 +71,7 @@ void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* o
     GtkWidget* notebook = gtk_notebook_new();
     add_view_tab(notebook, prefs);
     add_color_tab(notebook, prefs);
+    add_system_tab(notebook, prefs);
     gtk_container_add(GTK_CONTAINER(content_area), notebook);
 
     gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
@@ -75,6 +82,26 @@ void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* o
     display_preferences(prefs);
 
     gtk_widget_show_all(dialog);
+}
+
+void add_system_tab(GtkWidget* notebook, preferences* prefs) {
+    GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+
+    GtkWidget* fps_control_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget* fps_label = gtk_label_new("Frames per second:");
+    gtk_box_pack_start(GTK_BOX(fps_control_hbox), fps_label, 0, 0, 0);
+
+    GtkAdjustment* adjustment = gtk_adjustment_new(prefs->frames_per_second, 1, 200, 1, 0, 0);
+    fps_spin_button = gtk_spin_button_new(adjustment, 1.0, 0);
+
+    gtk_box_pack_start(GTK_BOX(fps_control_hbox), fps_spin_button, 0, 0, 0);
+
+    g_signal_connect(G_OBJECT(fps_spin_button), "value-changed", G_CALLBACK(on_fps_changed), prefs);
+
+    gtk_box_pack_start(GTK_BOX(vbox), fps_control_hbox, 0, 0, 0);
+
+    GtkWidget* color_tab_label = gtk_label_new("System");
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, color_tab_label);
 }
 
 void add_color_tab(GtkWidget* notebook, preferences* prefs) {
@@ -123,6 +150,11 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     draw_crosshair_check = gtk_check_button_new_with_label("Draw crosshair");
     gtk_box_pack_start(GTK_BOX(vbox), draw_crosshair_check, 0, 0, 0);
 
+    GtkWidget* zoom_controls_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+
+    GtkWidget* zoom_level_label = gtk_label_new("Zoom level:");
+    gtk_box_pack_start(GTK_BOX(zoom_controls_hbox), zoom_level_label, 0, 0, 0);
+
     zoom_level_combo = gtk_combo_box_text_new();
     int NUM_ZOOM_LEVELS = sizeof(ZOOM_LEVELS)/sizeof(ZOOM_LEVELS[0]);
     for(int i = 0; i < NUM_ZOOM_LEVELS; i++) {
@@ -130,7 +162,9 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
         sprintf(str, "%d", ZOOM_LEVELS[i]);
         gtk_combo_box_text_append((GtkComboBoxText*)zoom_level_combo, NULL, str);
     }
-    gtk_box_pack_start(GTK_BOX(vbox), zoom_level_combo, 0, 0, 0);
+    gtk_box_pack_start(GTK_BOX(zoom_controls_hbox), zoom_level_combo, 0, 0, 0);
+
+    gtk_box_pack_start(GTK_BOX(vbox), zoom_controls_hbox, 0, 0, 0);
 
     g_signal_connect(G_OBJECT(rgb_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->rgb_display));
     g_signal_connect(G_OBJECT(hex_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->hex_display));

@@ -11,6 +11,7 @@ typedef struct {
     int title_bar;
     int draw_crosshair;
     int zoom_level;
+    int frames_per_second;
     char* color_map_file;
 
 } preferences;

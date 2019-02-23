@@ -39,10 +39,12 @@ preferences* preferences_read() {
     prefs->title_bar = get_integer_value(file, "View", "title_bar", 1);
     prefs->zoom_level = get_integer_value(file, "View", "zoom_level", 25);
     prefs->draw_crosshair = get_integer_value(file, "View", "draw_crosshair", 1);
+    prefs->frames_per_second = get_integer_value(file, "System", "frames_per_second", 60);
 
     char* color_map_file = get_string_value(file, "Color", "color_map_file", "res/map.txt");
     prefs->color_map_file = strdup(color_map_file);
     free(color_map_file);
+    g_key_file_free(file);
 
     return prefs;
 }
@@ -95,6 +97,11 @@ void preferences_write(preferences* prefs) {
                         "View",
                         "draw_crosshair",
                         prefs->draw_crosshair);
+
+    g_key_file_set_integer (file,
+                        "System",
+                        "frames_per_second",
+                        prefs->frames_per_second);
 
     g_key_file_set_string (file,
                         "Color",

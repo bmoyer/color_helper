@@ -20,8 +20,8 @@
 #define DEBUG 0
 #define MAX_CONTEXT_SIZE 100
 #define MAX_COLORS 1000
-#define FRAMES_PER_SECOND 60
-const int USEC_PER_FRAME = pow(FRAMES_PER_SECOND, -1) * 1000000;
+
+int USEC_PER_FRAME;
 
 int cur_context_display_size = 100;
 int cur_context_size = 100;
@@ -77,6 +77,8 @@ void refresh_preferences() {
     if(cur_context_size != app_preferences.zoom_level) {
         cur_context_size = app_preferences.zoom_level;
     }
+
+    USEC_PER_FRAME = pow(app_preferences.frames_per_second, -1) * 1000000;
 
     load_color_list();
 }
@@ -210,7 +212,7 @@ static void draw_rect(int r, int g, int b) {
 static void draw_crosshair(cairo_t* rect) {
     const int SPACING = 10;
 
-    static const double dashed1[] = {5, SPACING};
+    const double dashed1[] = {5, SPACING};
     static int len1  = sizeof(dashed1) / sizeof(dashed1[0]);
 
     cairo_set_line_width(rect, 1.5);
@@ -362,7 +364,6 @@ void get_context_pixels(Display* d, int x, int y) {
 
 
 static gboolean update_color(gpointer user_data) {
-
     LOG_TID();
     if(!running)
         return G_SOURCE_REMOVE;
@@ -397,7 +398,7 @@ static gboolean update_color(gpointer user_data) {
     gtk_label_set_markup(GTK_LABEL(color_name_label), name_str);
 
     char *hex_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
-                               "Hex: %03X %03X %03X"
+                               "Hex: %02X %02X %02X"
                              "</span>",
                              r, g, b);
     gtk_label_set_markup(GTK_LABEL(hex_label), hex_str);
