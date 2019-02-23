@@ -28,6 +28,12 @@ Blue,0,0,255
 To identify a color's name from its RGB value, the tool finds the closest color from the map file. So, a larger list of colors will result in more specific color naming.
 
 ## Preferences
-Various elements of the UI can be toggled on or off. These preferences can be changed by right-clicking anywhere on the UI and selecting 'Preferences' from the dropdown menu.
+
+The preferences dialog can be accessed by right-clicking anywhere on the UI and selecting 'Preferences' from the dropdown menu. Some of the preferences supported are:
+- Hide and show various elements of the UI (title bar, crosshair display, etc.)
+- Custom color map file
+- Frames per second
+- Zoom level
 
 By default, preferences are stored in ~/config/colorhelperrc.
+
