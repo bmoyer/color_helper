@@ -11,7 +11,9 @@ Dependencies:
 To run:
 ```
 git clone https://github.com/bmoyer/color_helper.git
-cd color_helper
+mkdir color_helper/build
+cd color_helper/build
+cmake ..
 make -j8
 ./color_helper
 ```
