@@ -210,24 +210,37 @@ static void draw_rect(int r, int g, int b) {
 }
 
 static void draw_crosshair(cairo_t* rect) {
-    const int SPACING = 10;
+    const int SPACING = 5;
+    const int DASH_LENGTH = 5;
 
-    const double dashed1[] = {5, SPACING};
+    const double dashed1[] = {DASH_LENGTH, SPACING};
     static int len1  = sizeof(dashed1) / sizeof(dashed1[0]);
 
     cairo_set_line_width(rect, 1.5);
     cairo_set_dash(rect, dashed1, len1, 0);
     cairo_set_source_rgb(rect, 1, 1, 1);
 
-    // draw dotted horizontal line
+    // horizontal white dashes
     cairo_move_to(rect, 0, 50);
     cairo_line_to(rect, 100, 50);
     cairo_stroke(rect);
 
-    // draw dotted vertical line
+    // vertical white dashes
     cairo_move_to(rect, 50, 0);
     cairo_line_to(rect, 50, 100);
     cairo_stroke(rect);
+
+    // horizontal black dashes
+    cairo_set_source_rgb(rect, 0, 0, 0);
+    cairo_move_to(rect, DASH_LENGTH, 50);
+    cairo_line_to(rect, 100, 50);
+    cairo_stroke(rect);
+
+    // vertical black dashes
+    cairo_move_to(rect, 50, DASH_LENGTH);
+    cairo_line_to(rect, 50, 100);
+    cairo_stroke(rect);
+
 }
 
 
@@ -299,18 +312,6 @@ static void query_pointer(int* x, int* y) {
     }
 }
 
-void get_color(Display* d, int x, int y, int* r, int* g, int* b) {
-    XColor c;
-    XImage *image = XGetImage (d, XRootWindow (d, XDefaultScreen (d)), x, y, 1, 1, AllPlanes, XYPixmap);
-    c.pixel = XGetPixel (image, 0, 0);
-    XFree (image);
-    XQueryColor (d, XDefaultColormap(d, XDefaultScreen (d)), &c);
-
-    *r = (c.red/256);
-    *b = (c.blue/256);
-    *g = (c.green/256);
-}
-
 void clip_coords_to_display_size(int* x, int* y) {
     if (*x < 0) {
         *x = 0;
@@ -367,7 +368,6 @@ static gboolean update_color(gpointer user_data) {
     LOG_TID();
     if(!running)
         return G_SOURCE_REMOVE;
-
 
     // get color of pixel under cursor
     int r, g, b;
