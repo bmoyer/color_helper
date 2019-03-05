@@ -5,6 +5,10 @@
 
 #include "color_detect.h"
 
+#ifndef MAX_COLORS
+#define MAX_COLORS 5000
+#endif
+
 int get_color_distance(int r, int g, int b, color* c) {
     long rmean = ((long)r + (long)c->r)/2;
     long r2 = (long)r - (long)c->r;
@@ -39,7 +43,7 @@ void yuv_from_rgb(int* y, int* u, int* v, int r, int g, int b) {
     *v =  0.439 * r - 0.368 * g - 0.071 * b + 128;
 }
 
-int read_colors(color* color_list, char* filepath, int max_colors) {
+int read_colors(color** color_list, char* filepath, int* num_colors) {
     int i = 0;
     color c;
 
@@ -47,12 +51,14 @@ int read_colors(color* color_list, char* filepath, int max_colors) {
     if((file = fopen(filepath, "r")) == NULL) {
         sprintf(c.name, "Unknown");
         c.r = c.g = c.b = 0;
-        color_list[0] = c;
+        *color_list[0] = c;
         return 0;
     }
 
+    *color_list = calloc(MAX_COLORS, sizeof(color));
+
     char line[60];
-    while (fgets(line, 60, file)) {
+    while (fgets(line, 60, file) && i < MAX_COLORS) {
         // read color name
         char* pt = strtok(line, ",");
         sprintf(c.name, "%s", pt);
@@ -71,9 +77,10 @@ int read_colors(color* color_list, char* filepath, int max_colors) {
 
         yuv_from_rgb(&c.y, &c.u, &c.v, c.r, c.g, c.b);
 
-        color_list[i] = c;
+        (*color_list)[i] = c;
         i++;
     }
+    *num_colors = i;
     fclose(file);
 
     return 1;

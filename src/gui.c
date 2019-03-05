@@ -19,7 +19,8 @@
 
 #define DEBUG 0
 #define MAX_CONTEXT_SIZE 100
-#define MAX_COLORS 1000
+
+int color_list_length = 0;
 
 int USEC_PER_FRAME;
 
@@ -386,8 +387,9 @@ static gboolean update_color(gpointer user_data) {
                              s2);
 
     gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
+
     // set name readout
-    color c = nearest_color(r, g, b, color_list, MAX_COLORS);
+    color c = nearest_color(r, g, b, color_list, color_list_length);
 
     char nameLbl[60];
     sprintf(nameLbl, c.name);
@@ -574,8 +576,7 @@ void load_color_list() {
         free(color_list);
     }
 
-    color_list = calloc(MAX_COLORS, sizeof(color));
-    if(!read_colors(color_list, app_preferences.color_map_file, MAX_COLORS)) {
+    if(!read_colors(&color_list, app_preferences.color_map_file, &color_list_length)) {
         printf("Failed to open color file %s, color naming is disabled.\n",
             app_preferences.color_map_file);
     }
