@@ -44,8 +44,8 @@ void yuv_from_rgb(int* y, int* u, int* v, int r, int g, int b) {
 }
 
 int read_colors(color** color_list, char* filepath, int* num_colors) {
-    int i = 0;
     color c;
+    *color_list = calloc(MAX_COLORS, sizeof(color));
 
     FILE* file;
     if((file = fopen(filepath, "r")) == NULL) {
@@ -55,9 +55,9 @@ int read_colors(color** color_list, char* filepath, int* num_colors) {
         return 0;
     }
 
-    *color_list = calloc(MAX_COLORS, sizeof(color));
 
     char line[60];
+    int i = 0;
     while (fgets(line, 60, file) && i < MAX_COLORS) {
         // read color name
         char* pt = strtok(line, ",");
