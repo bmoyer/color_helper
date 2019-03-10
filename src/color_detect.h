@@ -16,6 +16,8 @@ typedef struct {
 } color;
 
 void yuv_from_rgb(int* y, int* u, int* v, int r, int g, int b);
+void hsv_from_rgb(float* h, float* s, float* v, int r, int g, int b);
+void hsl_from_hsv(float* hsl_h, float* hsl_s, float* hsl_l, float hsv_h, float hsv_s, float hsv_v);
 color nearest_color(int r, int g, int b, color* colors, int ncolors);
 int read_colors(color** color_list, char* filepath, int* max_colors);
 

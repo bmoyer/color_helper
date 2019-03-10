@@ -5,6 +5,7 @@
 GtkWidget* rgb_check;
 GtkWidget* hex_check;
 GtkWidget* hsv_check;
+GtkWidget* hsl_check;
 GtkWidget* name_check;
 GtkWidget* title_bar_check;
 GtkWidget* draw_crosshair_check;
@@ -139,7 +140,10 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     gtk_box_pack_start(GTK_BOX(vbox), hex_check, 0, 0, 0);
 
     hsv_check = gtk_check_button_new_with_label("HSV display");
-    // gtk_box_pack_start(GTK_BOX(vbox), hsv_check, 0, 0, 0); // not implemented yet
+    gtk_box_pack_start(GTK_BOX(vbox), hsv_check, 0, 0, 0);
+
+    hsl_check = gtk_check_button_new_with_label("HSL display");
+    gtk_box_pack_start(GTK_BOX(vbox), hsl_check, 0, 0, 0);
     
     name_check = gtk_check_button_new_with_label("Name display");
     gtk_box_pack_start(GTK_BOX(vbox), name_check, 0, 0, 0);
@@ -169,6 +173,7 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     g_signal_connect(G_OBJECT(rgb_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->rgb_display));
     g_signal_connect(G_OBJECT(hex_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->hex_display));
     g_signal_connect(G_OBJECT(hsv_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->hsv_display));
+    g_signal_connect(G_OBJECT(hsl_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->hsl_display));
     g_signal_connect(G_OBJECT(name_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->name_display));
     g_signal_connect(G_OBJECT(title_bar_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->title_bar));
     g_signal_connect(G_OBJECT(draw_crosshair_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->draw_crosshair));
@@ -180,6 +185,7 @@ void display_preferences(preferences* prefs) {
     gtk_toggle_button_set_active((GtkToggleButton*)rgb_check, prefs->rgb_display);
     gtk_toggle_button_set_active((GtkToggleButton*)hex_check, prefs->hex_display);
     gtk_toggle_button_set_active((GtkToggleButton*)hsv_check, prefs->hsv_display);
+    gtk_toggle_button_set_active((GtkToggleButton*)hsl_check, prefs->hsl_display);
     gtk_toggle_button_set_active((GtkToggleButton*)name_check, prefs->name_display);
     gtk_toggle_button_set_active((GtkToggleButton*)title_bar_check, prefs->title_bar);
     gtk_toggle_button_set_active((GtkToggleButton*)draw_crosshair_check, prefs->draw_crosshair);

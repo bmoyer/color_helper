@@ -4,6 +4,7 @@
 #include <math.h>
 
 #include "color_detect.h"
+#include "util.h"
 
 #ifndef MAX_COLORS
 #define MAX_COLORS 5000
@@ -31,9 +32,6 @@ color nearest_color(int y, int u, int v, color* colors, int ncolors) {
         }
     }
 
-    //printf("closest (rgb): (%d,%d,%d)\n", closest.r,closest.g,closest.b);
-    //printf("yuvs: (%d,%d,%d) --- (%d,%d,%d)\n",
-        //y,u,v,closest.r,closest.g,closest.b);
     return closest;
 }
 
@@ -41,6 +39,50 @@ void yuv_from_rgb(int* y, int* u, int* v, int r, int g, int b) {
     *y =  0.257 * r + 0.504 * g + 0.098 * b +  16;
     *u = -0.148 * r - 0.291 * g + 0.439 * b + 128;
     *v =  0.439 * r - 0.368 * g - 0.071 * b + 128;
+}
+
+void hsv_from_rgb(float* h, float* s, float* v, int r, int g, int b) {
+    float rf = r/255.0;
+    float gf = g/255.0;
+    float bf = b/255.0;
+
+    float max_val = max(max(rf, gf), max(gf, bf));
+    float min_val = min(min(rf, gf), min(gf, bf));
+
+    // calculate H
+    if (max_val == min_val) {
+        *h = 0.0;
+    }
+    else if (max_val == rf) {
+        *h = 60.0 * (0.0 + (gf - bf)/(max_val - min_val));
+    }
+    else if (max_val == gf) {
+        *h = 60.0 * (2.0 + (bf - rf)/(max_val - min_val));
+    }
+    else if (max_val == bf) {
+        *h = 60.0 * (4.0 + (rf - gf)/(max_val - min_val));
+    }
+
+    if (*h < 0.0) {
+        *h += 360.0;
+    }
+
+    // calculate S
+    if (max_val == 0.0) {
+        *s = 0.0;
+    }
+    else {
+        *s = (max_val-min_val)/max_val;
+    }
+
+    // calculate V
+    *v = max_val;
+}
+
+void hsl_from_hsv(float* hsl_h, float* hsl_s, float* hsl_l, float hsv_h, float hsv_s, float hsv_v) {
+    *hsl_h = hsv_h;
+    *hsl_l = hsv_v - hsv_v*hsv_s/2;
+    *hsl_s = ((*hsl_l == 0) || (*hsl_l == 1)) ? 0 : (hsv_v - *hsl_l)/min(*hsl_l, 1-*hsl_l);
 }
 
 int read_colors(color** color_list, char* filepath, int* num_colors) {

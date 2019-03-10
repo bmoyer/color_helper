@@ -42,6 +42,8 @@ GtkWidget* main_window;
 GtkWidget* color_name_label;
 GtkWidget* rgb_label;
 GtkWidget* hex_label;
+GtkWidget* hsv_label;
+GtkWidget* hsl_label;
 GtkWidget* color_drawing_area;
 GtkWidget* context_drawing_area;
 preferences app_preferences;
@@ -69,6 +71,12 @@ void refresh_preferences() {
 
     app_preferences.hex_display ? gtk_widget_show(hex_label) :
                                   gtk_widget_hide(hex_label);
+
+    app_preferences.hsv_display ? gtk_widget_show(hsv_label) :
+                                  gtk_widget_hide(hsv_label);
+
+    app_preferences.hsl_display ? gtk_widget_show(hsl_label) :
+                                  gtk_widget_hide(hsl_label);
 
     app_preferences.name_display ? gtk_widget_show(color_name_label) :
                                   gtk_widget_hide(color_name_label);
@@ -379,7 +387,7 @@ static gboolean update_color(gpointer user_data) {
     LOG_TIMING(draw_context_pixels(), "DRAWCONTEXT");
 
     // set RGB readout
-    sprintf(s2, "RGB: (%03d, %03d, %03d)", r, g, b);
+    sprintf(s2, "RGB: %03d %03d %03d", r, g, b);
 
     char *rgb_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
                                "%s"
@@ -387,6 +395,24 @@ static gboolean update_color(gpointer user_data) {
                              s2);
 
     gtk_label_set_markup(GTK_LABEL(rgb_label), rgb_str);
+
+    // set HSV readout
+    float h, s, v;
+    hsv_from_rgb(&h, &s, &v, r, g, b);
+    char* hsv_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
+                               "HSV: %03.0f %03.0f %03.0f"
+                             "</span>",
+                             h, s*100.0, v*100.0);
+    gtk_label_set_markup(GTK_LABEL(hsv_label), hsv_str);
+
+    // set HSL readout
+    float hsl_h, hsl_s, hsl_l;
+    hsl_from_hsv(&hsl_h, &hsl_s, &hsl_l, h, s, v);
+    char* hsl_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
+                               "HSL: %03.0f %03.0f %03.0f"
+                             "</span>",
+                             hsl_h, hsl_s*100, hsl_l*100);
+    gtk_label_set_markup(GTK_LABEL(hsl_label), hsl_str);
 
     // set name readout
     color c = nearest_color(r, g, b, color_list, color_list_length);
@@ -399,14 +425,17 @@ static gboolean update_color(gpointer user_data) {
                              nameLbl);
     gtk_label_set_markup(GTK_LABEL(color_name_label), name_str);
 
-    char *hex_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
+    char* hex_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
                                "Hex: %02X %02X %02X"
                              "</span>",
                              r, g, b);
     gtk_label_set_markup(GTK_LABEL(hex_label), hex_str);
+
     draw_rect(r, g, b);
 
     g_free(rgb_str);
+    g_free(hsv_str);
+    g_free(hsl_str);
     g_free(name_str);
     g_free(hex_str);
 
@@ -497,6 +526,8 @@ static void activate (GtkApplication *app, gpointer user_data) {
 
     main_window = gtk_application_window_new (app);
     gtk_window_set_title (GTK_WINDOW (main_window), "Color Helper");
+    gtk_window_set_resizable (GTK_WINDOW (main_window), FALSE);
+    gtk_window_set_default_size(GTK_WINDOW (main_window), 400, 100);
 
     g_signal_connect (main_window, "destroy", G_CALLBACK (close_window), NULL);
     g_signal_connect (main_window, "delete-event", G_CALLBACK (delete_event), NULL);
@@ -530,10 +561,19 @@ static void activate (GtkApplication *app, gpointer user_data) {
     gtk_widget_set_halign(rgb_label, GTK_ALIGN_START);
 
     hex_label = gtk_label_new("FF FF FF");
-    gtk_box_pack_start(GTK_BOX(vbox), hex_label, 0, 0, 0);
-
     gtk_widget_set_valign(hex_label, GTK_ALIGN_START);
     gtk_widget_set_halign(hex_label, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(vbox), hex_label, 0, 0, 0);
+
+    hsv_label = gtk_label_new("0 0 0");
+    gtk_widget_set_valign(hsv_label, GTK_ALIGN_START);
+    gtk_widget_set_halign(hsv_label, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(vbox), hsv_label, 0, 0, 0);
+
+    hsl_label = gtk_label_new("0 0 0");
+    gtk_widget_set_valign(hsl_label, GTK_ALIGN_START);
+    gtk_widget_set_halign(hsl_label, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(vbox), hsl_label, 0, 0, 0);
 
     color_drawing_area = gtk_drawing_area_new ();
     context_drawing_area = gtk_drawing_area_new ();

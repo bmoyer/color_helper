@@ -35,6 +35,7 @@ preferences* preferences_read() {
     prefs->rgb_display = get_integer_value(file, "View", "rgb_display", 1);
     prefs->hex_display = get_integer_value(file, "View", "hex_display", 0);
     prefs->hsv_display = get_integer_value(file, "View", "hsv_display", 0);
+    prefs->hsl_display = get_integer_value(file, "View", "hsl_display", 0);
     prefs->name_display = get_integer_value(file, "View", "name_display", 1);
     prefs->title_bar = get_integer_value(file, "View", "title_bar", 1);
     prefs->zoom_level = get_integer_value(file, "View", "zoom_level", 25);
@@ -76,7 +77,12 @@ void preferences_write(preferences* prefs) {
     g_key_file_set_integer (file,
                         "View",
                         "hsv_display",
-                        prefs->hex_display);
+                        prefs->hsv_display);
+
+    g_key_file_set_integer (file,
+                        "View",
+                        "hsl_display",
+                        prefs->hsl_display);
 
     g_key_file_set_integer (file,
                         "View",

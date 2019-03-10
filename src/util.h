@@ -1,6 +1,16 @@
 #ifndef UTIL_H
 #define UTIL_H 
 
+#define max(a,b) \
+({ __typeof__ (a) _a = (a); \
+   __typeof__ (b) _b = (b); \
+ _a > _b ? _a : _b; })
+
+#define min(a,b) \
+({ __typeof__ (a) _a = (a); \
+   __typeof__ (b) _b = (b); \
+ _a < _b ? _a : _b; })
+
 #define debug_print(...) \
             do { if (DEBUG) fprintf(stderr, __VA_ARGS__); } while (0)
 
@@ -16,16 +26,7 @@
 
 #define LOG_TID() debug_print("%s::%s\tTID = %ld\n", __FILE__, __func__, syscall(SYS_gettid));
 
-struct timeval get_time() {
-    struct timeval tval;
-    gettimeofday(&tval, NULL);
-    return tval;
-}
-
-long get_usec_elapsed(struct timeval* after, struct timeval* before) {
-    struct timeval result;
-    timersub(after, before, &result);
-    return result.tv_sec * 1000000L + result.tv_usec;
-}
+struct timeval get_time();
+long get_usec_elapsed(struct timeval* after, struct timeval* before);
 
 #endif /* UTIL_H */
