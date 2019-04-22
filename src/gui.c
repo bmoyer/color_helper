@@ -24,7 +24,8 @@ int color_list_length = 0;
 
 int USEC_PER_FRAME;
 
-int cur_context_display_size = 100;
+int cur_context_display_size = 150;
+int cur_color_display_size = 150;
 int cur_context_size = 100;
 
 static Window root;
@@ -89,6 +90,8 @@ void refresh_preferences() {
 
     USEC_PER_FRAME = pow(app_preferences.frames_per_second, -1) * 1000000;
 
+    clear_surface (rgb_surface);
+    clear_surface (context_surface);
     load_color_list();
 }
 
@@ -157,8 +160,7 @@ static gboolean configure_event_cb_rgb (GtkWidget *widget,
             CAIRO_CONTENT_COLOR,
             gtk_widget_get_allocated_width 
             (widget),
-            gtk_widget_get_allocated_height 
-            (widget));
+            cur_color_display_size);
 
     clear_surface (rgb_surface);
     return TRUE;
@@ -174,8 +176,7 @@ static gboolean configure_event_cb_context (GtkWidget *widget,
             CAIRO_CONTENT_COLOR,
             gtk_widget_get_allocated_width 
             (widget),
-            gtk_widget_get_allocated_height 
-            (widget));
+    cur_context_display_size);
 
     clear_surface (context_surface);
     return TRUE;
@@ -209,13 +210,13 @@ static void draw_rect(int r, int g, int b) {
     cr = cairo_create (rgb_surface);
     cairo_set_source_rgb(cr, r/255.0, g/255.0, b/255.0);
 
-    cairo_rectangle (cr, 0, 0, cur_context_display_size, cur_context_display_size);
+    cairo_rectangle (cr, 0, 0, cur_color_display_size, cur_color_display_size);
     cairo_fill (cr);
 
     cairo_destroy (cr);
 
     /* Now invalidate the affected region of the drawing area. */
-    gtk_widget_queue_draw_area (color_drawing_area, 0, 0, cur_context_display_size, cur_context_display_size);
+    gtk_widget_queue_draw_area (color_drawing_area, 0, 0, cur_color_display_size, cur_color_display_size);
 }
 
 static void draw_crosshair(cairo_t* rect) {
@@ -229,27 +230,28 @@ static void draw_crosshair(cairo_t* rect) {
     cairo_set_dash(rect, dashed1, len1, 0);
     cairo_set_source_rgb(rect, 1, 1, 1);
 
+    const int CENTER_CONTEXT_DISPLAY_PIXEL = cur_context_display_size / 2;
+
     // horizontal white dashes
-    cairo_move_to(rect, 0, 50);
-    cairo_line_to(rect, 100, 50);
+    cairo_move_to(rect, 0, CENTER_CONTEXT_DISPLAY_PIXEL);
+    cairo_line_to(rect, cur_context_display_size, CENTER_CONTEXT_DISPLAY_PIXEL);
     cairo_stroke(rect);
 
     // vertical white dashes
-    cairo_move_to(rect, 50, 0);
-    cairo_line_to(rect, 50, 100);
+    cairo_move_to(rect, CENTER_CONTEXT_DISPLAY_PIXEL, 0);
+    cairo_line_to(rect, CENTER_CONTEXT_DISPLAY_PIXEL, cur_context_display_size);
     cairo_stroke(rect);
 
     // horizontal black dashes
     cairo_set_source_rgb(rect, 0, 0, 0);
-    cairo_move_to(rect, DASH_LENGTH, 50);
-    cairo_line_to(rect, 100, 50);
+    cairo_move_to(rect, DASH_LENGTH, CENTER_CONTEXT_DISPLAY_PIXEL);
+    cairo_line_to(rect, cur_context_display_size, CENTER_CONTEXT_DISPLAY_PIXEL);
     cairo_stroke(rect);
 
     // vertical black dashes
-    cairo_move_to(rect, 50, DASH_LENGTH);
-    cairo_line_to(rect, 50, 100);
+    cairo_move_to(rect, CENTER_CONTEXT_DISPLAY_PIXEL, DASH_LENGTH);
+    cairo_line_to(rect, CENTER_CONTEXT_DISPLAY_PIXEL, cur_context_display_size);
     cairo_stroke(rect);
-
 }
 
 
@@ -535,10 +537,10 @@ static void activate (GtkApplication *app, gpointer user_data) {
     gtk_container_set_border_width (GTK_CONTAINER (main_window), 8);
 
     frame = gtk_frame_new (NULL);
-    gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_IN);
+    gtk_frame_set_shadow_type (GTK_FRAME (frame), GTK_SHADOW_NONE);
 
     context_frame = gtk_frame_new (NULL);
-    gtk_frame_set_shadow_type (GTK_FRAME (context_frame), GTK_SHADOW_IN);
+    gtk_frame_set_shadow_type (GTK_FRAME (context_frame), GTK_SHADOW_NONE);
 
     hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
@@ -579,8 +581,8 @@ static void activate (GtkApplication *app, gpointer user_data) {
     context_drawing_area = gtk_drawing_area_new ();
 
     // set a minimum size
-    gtk_widget_set_size_request (color_drawing_area, 100, 100);
-    gtk_widget_set_size_request (context_drawing_area, 100, 100);
+    gtk_widget_set_size_request (color_drawing_area, cur_color_display_size, cur_color_display_size);
+    gtk_widget_set_size_request (context_drawing_area, cur_context_display_size, cur_context_display_size);
 
     gtk_container_add (GTK_CONTAINER (frame), color_drawing_area);
     gtk_container_add (GTK_CONTAINER (context_frame), context_drawing_area);
